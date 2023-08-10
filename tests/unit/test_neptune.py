@@ -491,7 +491,9 @@ def _create_dummy_vertex(label: str = "foo") -> Dict[str, Any]:
         "~id": str(uuid.uuid4()),
         "~label": label,
         "int": random.randint(0, 1000),
-        "str": "".join(random.choice(string.ascii_lowercase) for i in range(10)),
+        "str": "".join(
+            random.choice(string.ascii_lowercase) for _ in range(10)
+        ),
         "list": [random.randint(0, 1000), random.randint(0, 1000)],
     }
 
@@ -503,7 +505,9 @@ def _create_dummy_edge() -> Dict[str, Any]:
         "~to": str(uuid.uuid4()),
         "~from": str(uuid.uuid4()),
         "int": random.randint(0, 1000),
-        "str": "".join(random.choice(string.ascii_lowercase) for i in range(10)),
+        "str": "".join(
+            random.choice(string.ascii_lowercase) for _ in range(10)
+        ),
     }
 
 

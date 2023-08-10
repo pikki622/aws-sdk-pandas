@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 def _cast_value(value: str, dtype: str) -> Any:  # pylint: disable=too-many-branches,too-many-return-statements
     if dtype == "VARCHAR":
         return value
-    if dtype in ("INTEGER", "BIGINT"):
+    if dtype in {"INTEGER", "BIGINT"}:
         return int(value)
     if dtype == "DOUBLE":
         return float(value)
@@ -34,7 +34,7 @@ def _cast_value(value: str, dtype: str) -> Any:  # pylint: disable=too-many-bran
     if dtype == "TIME":
         return datetime.strptime(value[:-3], "%H:%M:%S.%f").time()
     if dtype == "ARRAY":
-        return str(value)
+        return value
     raise ValueError(f"Not supported Amazon Timestream type: {dtype}")
 
 
@@ -161,9 +161,7 @@ def query(
     if chunked:
         return result_iterator
 
-    # Prepending an empty DataFrame ensures returning an empty DataFrame if result_iterator is empty
-    results = list(result_iterator)
-    if len(results) > 0:
+    if results := list(result_iterator):
         # Modin's concat() can not concatenate empty data frames
         return pd.concat(results, ignore_index=True)
     return pd.DataFrame()
@@ -293,20 +291,7 @@ def unload(
     )
     results_path = f"{path}results/"
     try:
-        if unload_format == "CSV":
-            column_names: List[str] = _get_column_names_from_metadata(path, boto3_session)
-            return s3.read_csv(
-                path=results_path,
-                header=None,
-                names=[column for column in column_names if column not in set(partition_cols)]
-                if partition_cols is not None
-                else column_names,
-                dataset=True,
-                use_threads=use_threads,
-                boto3_session=boto3_session,
-                s3_additional_kwargs=s3_additional_kwargs,
-            )
-        else:
+        if unload_format != "CSV":
             return s3.read_parquet(
                 path=results_path,
                 chunked=chunked,
@@ -316,8 +301,20 @@ def unload(
                 s3_additional_kwargs=s3_additional_kwargs,
                 pyarrow_additional_kwargs=pyarrow_additional_kwargs,
             )
+        column_names: List[str] = _get_column_names_from_metadata(path, boto3_session)
+        return s3.read_csv(
+            path=results_path,
+            header=None,
+            names=[column for column in column_names if column not in set(partition_cols)]
+            if partition_cols is not None
+            else column_names,
+            dataset=True,
+            use_threads=use_threads,
+            boto3_session=boto3_session,
+            s3_additional_kwargs=s3_additional_kwargs,
+        )
     finally:
-        if keep_files is False:
+        if not keep_files:
             _logger.debug("Deleting objects in S3 path: %s", path)
             s3.delete_objects(
                 path=path,

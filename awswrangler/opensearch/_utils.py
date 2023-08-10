@@ -41,8 +41,7 @@ def _get_version(client: "opensearchpy.OpenSearch") -> Any:
 
 
 def _get_version_major(client: "opensearchpy.OpenSearch") -> Any:
-    version = _get_version(client)
-    if version:
+    if version := _get_version(client):
         return int(version.split(".")[0])
     return None
 

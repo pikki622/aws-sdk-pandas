@@ -29,7 +29,7 @@ def _read_parquet_iterator(
     s3_additional_kwargs: Optional[Dict[str, str]],
     pyarrow_additional_kwargs: Optional[Dict[str, Any]],
 ) -> Iterator[pd.DataFrame]:
-    dfs: Iterator[pd.DataFrame] = s3.read_parquet(
+    yield from s3.read_parquet(
         path=path,
         chunked=chunked,
         dataset=False,
@@ -39,8 +39,7 @@ def _read_parquet_iterator(
         s3_additional_kwargs=s3_additional_kwargs,
         pyarrow_additional_kwargs=pyarrow_additional_kwargs,
     )
-    yield from dfs
-    if keep_files is False:
+    if not keep_files:
         s3.delete_objects(
             path=path, use_threads=use_threads, boto3_session=boto3_session, s3_additional_kwargs=s3_additional_kwargs
         )
@@ -303,7 +302,7 @@ def unload_to_files(
     with con.cursor() as cursor:
         format_str: str = unload_format or "PARQUET"
         partition_str: str = f"\nPARTITION BY ({','.join(partition_cols)})" if partition_cols else ""
-        manifest_str: str = "\nmanifest" if manifest is True else ""
+        manifest_str: str = "\nmanifest" if manifest else ""
         region_str: str = f"\nREGION AS '{region}'" if region is not None else ""
         if not max_file_size and engine.get() == EngineEnum.RAY:
             _logger.warning(
@@ -500,7 +499,7 @@ def unload(
             s3_additional_kwargs=s3_additional_kwargs,
             pyarrow_additional_kwargs=pyarrow_additional_kwargs,
         )
-        if keep_files is False:
+        if not keep_files:
             _logger.debug("Deleting objects in S3 path: %s", path)
             s3.delete_objects(
                 path=path,

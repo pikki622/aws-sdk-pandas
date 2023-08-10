@@ -144,12 +144,7 @@ class _PartiQLEngine(_Engine):
 
 
 def _format_parameters(params: Dict[str, Any], engine: _Engine) -> Dict[str, Any]:
-    processed_params = {}
-
-    for k, v in params.items():
-        processed_params[k] = engine.format(data=v)
-
-    return processed_params
+    return {k: engine.format(data=v) for k, v in params.items()}
 
 
 _PATTERN = re.compile(r":([A-Za-z0-9_]+)(?![A-Za-z0-9_])")
@@ -176,11 +171,11 @@ def _process_sql_params(sql: str, params: Optional[Dict[str, Any]], engine_type:
     processed_params = _format_parameters(params, engine=engine)
 
     def replace(match: re.Match) -> str:  # type: ignore[type-arg]
-        key = match.group(1)
+        key = match[1]
 
         if key not in processed_params:
             # do not replace anything if the parameter is not provided
-            return str(match.group(0))
+            return str(match[0])
 
         return str(processed_params[key])
 

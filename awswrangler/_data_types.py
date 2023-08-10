@@ -300,7 +300,7 @@ def _split_map(s: str) -> List[str]:
     return parts
 
 
-def athena2pyarrow(dtype: str) -> pa.DataType:  # pylint: disable=too-many-return-statements,too-many-branches
+def athena2pyarrow(dtype: str) -> pa.DataType:    # pylint: disable=too-many-return-statements,too-many-branches
     """Athena to PyArrow data types conversion."""
     if dtype.startswith(("array", "struct", "map")):
         orig_dtype: str = dtype
@@ -309,17 +309,21 @@ def athena2pyarrow(dtype: str) -> pa.DataType:  # pylint: disable=too-many-retur
         return pa.int8()
     if dtype == "smallint":
         return pa.int16()
-    if dtype in ("int", "integer"):
+    if dtype in {"int", "integer"}:
         return pa.int32()
     if dtype == "bigint":
         return pa.int64()
-    if dtype in ("float", "real"):
+    if dtype in {"float", "real"}:
         return pa.float32()
     if dtype == "double":
         return pa.float64()
     if dtype == "boolean":
         return pa.bool_()
-    if (dtype in ("string", "uuid")) or dtype.startswith("char") or dtype.startswith("varchar"):
+    if (
+        dtype in {"string", "uuid"}
+        or dtype.startswith("char")
+        or dtype.startswith("varchar")
+    ):
         return pa.string()
     if dtype == "timestamp":
         return pa.timestamp(unit="ns")
@@ -342,18 +346,18 @@ def athena2pyarrow(dtype: str) -> pa.DataType:  # pylint: disable=too-many-retur
     raise exceptions.UnsupportedType(f"Unsupported Athena type: {dtype}")
 
 
-def athena2pandas(dtype: str, dtype_backend: Optional[str] = None) -> str:  # pylint: disable=too-many-return-statements
+def athena2pandas(dtype: str, dtype_backend: Optional[str] = None) -> str:    # pylint: disable=too-many-return-statements
     """Athena to Pandas data types conversion."""
     dtype = dtype.lower()
     if dtype == "tinyint":
         return "Int8" if dtype_backend != "pyarrow" else "int8[pyarrow]"
     if dtype == "smallint":
         return "Int16" if dtype_backend != "pyarrow" else "int16[pyarrow]"
-    if dtype in ("int", "integer"):
+    if dtype in {"int", "integer"}:
         return "Int32" if dtype_backend != "pyarrow" else "int32[pyarrow]"
     if dtype == "bigint":
         return "Int64" if dtype_backend != "pyarrow" else "int64[pyarrow]"
-    if dtype in ("float", "real"):
+    if dtype in {"float", "real"}:
         return "float32" if dtype_backend != "pyarrow" else "double[pyarrow]"
     if dtype == "double":
         return "float64" if dtype_backend != "pyarrow" else "double[pyarrow]"
@@ -361,35 +365,35 @@ def athena2pandas(dtype: str, dtype_backend: Optional[str] = None) -> str:  # py
         return "boolean" if dtype_backend != "pyarrow" else "bool[pyarrow]"
     if (dtype == "string") or dtype.startswith("char") or dtype.startswith("varchar"):
         return "string" if dtype_backend != "pyarrow" else "string[pyarrow]"
-    if dtype in ("timestamp", "timestamp with time zone"):
+    if dtype in {"timestamp", "timestamp with time zone"}:
         return "datetime64" if dtype_backend != "pyarrow" else "date64[pyarrow]"
     if dtype == "date":
         return "date" if dtype_backend != "pyarrow" else "date32[pyarrow]"
     if dtype.startswith("decimal"):
         return "decimal" if dtype_backend != "pyarrow" else "double[pyarrow]"
-    if dtype in ("binary", "varbinary"):
+    if dtype in {"binary", "varbinary"}:
         return "bytes" if dtype_backend != "pyarrow" else "binary[pyarrow]"
-    if dtype in ("array", "row", "map"):
+    if dtype in {"array", "row", "map"}:
         return "object"
     raise exceptions.UnsupportedType(f"Unsupported Athena type: {dtype}")
 
 
-def athena2quicksight(dtype: str) -> str:  # pylint: disable=too-many-branches,too-many-return-statements
+def athena2quicksight(dtype: str) -> str:    # pylint: disable=too-many-branches,too-many-return-statements
     """Athena to Quicksight data types conversion."""
     dtype = dtype.lower()
     if dtype == "tinyint":
         return "INTEGER"
     if dtype == "smallint":
         return "INTEGER"
-    if dtype in ("int", "integer"):
+    if dtype in {"int", "integer"}:
         return "INTEGER"
     if dtype == "bigint":
         return "INTEGER"
-    if dtype in ("float", "real"):
+    if dtype in {"float", "real"}:
         return "DECIMAL"
     if dtype == "double":
         return "DECIMAL"
-    if dtype in ("boolean", "bool"):
+    if dtype in {"boolean", "bool"}:
         return "BOOLEAN"
     if dtype.startswith(("char", "varchar")):
         return "STRING"
@@ -415,17 +419,17 @@ def athena2redshift(  # pylint: disable=too-many-branches,too-many-return-statem
         return "SMALLINT"
     if dtype == "smallint":
         return "SMALLINT"
-    if dtype in ("int", "integer"):
+    if dtype in {"int", "integer"}:
         return "INTEGER"
     if dtype == "bigint":
         return "BIGINT"
-    if dtype in ("float", "real"):
+    if dtype in {"float", "real"}:
         return "FLOAT4"
     if dtype == "double":
         return "FLOAT8"
-    if dtype in ("boolean", "bool"):
+    if dtype in {"boolean", "bool"}:
         return "BOOL"
-    if dtype in ("string", "char", "varchar"):
+    if dtype in {"string", "char", "varchar"}:
         return f"VARCHAR({varchar_length})"
     if dtype == "timestamp":
         return "TIMESTAMP"
@@ -460,9 +464,7 @@ def pyarrow2pandas_extension(  # pylint: disable=too-many-branches,too-many-retu
         return pd.UInt64Dtype()
     if pa.types.is_boolean(dtype):
         return pd.BooleanDtype()
-    if pa.types.is_string(dtype):
-        return pd.StringDtype()
-    return None
+    return pd.StringDtype() if pa.types.is_string(dtype) else None
 
 
 def pyarrow2pyarrow_backed_pandas_extension(  # pylint: disable=too-many-branches,too-many-return-statements
@@ -537,7 +539,7 @@ def pyarrow_types_from_pandas(  # pylint: disable=too-many-branches,too-many-sta
 
     # Filling indexes
     indexes: List[str] = []
-    if index is True:
+    if index:
         # Get index columns
         try:
             fields = pa.Schema.from_pandas(df=df[[]], preserve_index=True)
@@ -557,7 +559,11 @@ def pyarrow_types_from_pandas(  # pylint: disable=too-many-branches,too-many-sta
             indexes.append(name)
 
     # Merging Index
-    sorted_cols: List[str] = indexes + list(df.columns) if index_left is True else list(df.columns) + indexes
+    sorted_cols: List[str] = (
+        indexes + list(df.columns)
+        if index_left
+        else list(df.columns) + indexes
+    )
 
     # Filling schema
     columns_types: Dict[str, pa.DataType]
@@ -578,7 +584,7 @@ def pyarrow2pandas_defaults(
         "types_mapper": get_pyarrow2pandas_type_mapper(dtype_backend),
     }
     if kwargs:
-        default_kwargs.update(kwargs)
+        default_kwargs |= kwargs
     return default_kwargs
 
 
@@ -659,13 +665,14 @@ def athena_types_from_pandas_partitioned(
     athena_columns_types: Dict[str, str] = athena_types_from_pandas(
         df=df, index=index, dtype=dtype, index_left=index_left
     )
-    columns_types: Dict[str, str] = {}
-    for col, typ in athena_columns_types.items():
-        if col not in partitions:
-            columns_types[col] = typ
-    partitions_types: Dict[str, str] = {}
-    for par in partitions:
-        partitions_types[par] = athena_columns_types[par]
+    columns_types: Dict[str, str] = {
+        col: typ
+        for col, typ in athena_columns_types.items()
+        if col not in partitions
+    }
+    partitions_types: Dict[str, str] = {
+        par: athena_columns_types[par] for par in partitions
+    }
     return columns_types, partitions_types
 
 
@@ -729,9 +736,7 @@ def cast_pandas_with_athena_types(
 def _normalize_pandas_dtype_name(dtype: str) -> str:
     if dtype.startswith("datetime64") is True:
         return "datetime64"
-    if dtype.startswith("decimal") is True:
-        return "decimal"
-    return dtype
+    return "decimal" if dtype.startswith("decimal") is True else dtype
 
 
 def _cast2date(value: Any) -> Any:
@@ -817,6 +822,4 @@ def timestream_type_from_pandas(df: pd.DataFrame) -> List[str]:
 
 def get_arrow_timestamp_unit(data_type: pa.lib.DataType) -> Any:
     """Return unit of pyarrow timestamp. If the pyarrow type is not timestamp then None is returned."""
-    if isinstance(data_type, pa.lib.TimestampType):
-        return data_type.unit
-    return None
+    return data_type.unit if isinstance(data_type, pa.lib.TimestampType) else None

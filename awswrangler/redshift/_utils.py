@@ -233,7 +233,7 @@ def _redshift_types_from_path(
     _logger.debug("Parquet metadata types: %s", athena_types)
     redshift_types: Dict[str, str] = {}
     for col_name, col_type in athena_types.items():
-        length: int = _varchar_lengths[col_name] if col_name in _varchar_lengths else varchar_lengths_default
+        length: int = _varchar_lengths.get(col_name, varchar_lengths_default)
         redshift_types[col_name] = _data_types.athena2redshift(dtype=col_type, varchar_length=length)
     _logger.debug("Converted redshift types: %s", redshift_types)
     return redshift_types
@@ -268,7 +268,13 @@ def _create_table(  # pylint: disable=too-many-locals,too-many-arguments,too-man
 ) -> Tuple[str, Optional[str]]:
     _logger.debug("Creating table %s with mode %s, and overwrite method %s", table, mode, overwrite_method)
     if mode == "overwrite":
-        if overwrite_method == "truncate":
+        if overwrite_method == "delete":
+            if _does_table_exist(cursor=cursor, schema=schema, table=table):
+                if lock:
+                    _lock(cursor, [table], schema=schema)
+                # Atomic, but slow.
+                _delete_all(cursor=cursor, schema=schema, table=table)
+        elif overwrite_method == "truncate":
             try:
                 # Truncate commits current transaction, if successful.
                 # Fast, but not atomic.
@@ -282,16 +288,14 @@ def _create_table(  # pylint: disable=too-many-locals,too-many-arguments,too-man
             _begin_transaction(cursor=cursor)
             if lock:
                 _lock(cursor, [table], schema=schema)
-        elif overwrite_method == "delete":
-            if _does_table_exist(cursor=cursor, schema=schema, table=table):
-                if lock:
-                    _lock(cursor, [table], schema=schema)
-                # Atomic, but slow.
-                _delete_all(cursor=cursor, schema=schema, table=table)
         else:
             # Fast, atomic, but either fails if there are any dependent views or, in cascade mode, deletes them.
-            _drop_table(cursor=cursor, schema=schema, table=table, cascade=bool(overwrite_method == "cascade"))
-            # No point in locking here, the oid will change.
+            _drop_table(
+                cursor=cursor,
+                schema=schema,
+                table=table,
+                cascade=overwrite_method == "cascade",
+            )
     elif _does_table_exist(cursor=cursor, schema=schema, table=table) is True:
         _logger.debug("Table %s exists", table)
         if lock:
@@ -350,7 +354,9 @@ def _create_table(  # pylint: disable=too-many-locals,too-many-arguments,too-man
     )
     cols_str: str = "".join([f'"{k}" {v},\n' for k, v in redshift_types.items()])[:-2]
     primary_keys_str: str = (
-        ",\nPRIMARY KEY ({})".format(", ".join('"' + pk + '"' for pk in primary_keys)) if primary_keys else ""
+        f""",\nPRIMARY KEY ({", ".join('"' + pk + '"' for pk in primary_keys)})"""
+        if primary_keys
+        else ""
     )
     distkey_str: str = f"\nDISTKEY({distkey})" if distkey and diststyle == "KEY" else ""
     sortkey_str: str = f"\n{sortstyle} SORTKEY({','.join(sortkey)})" if sortkey else ""

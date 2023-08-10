@@ -178,8 +178,7 @@ class _Config:  # pylint: disable=too-many-instance-attributes,too-many-public-m
             nullable=_CONFIG_ARGS[key].nullable,
         )
 
-        parent_key = _CONFIG_ARGS[key].parent_parameter_key
-        if parent_key:
+        if parent_key := _CONFIG_ARGS[key].parent_parameter_key:
             self._loaded_values[parent_key][key] = value_casted  # type: ignore[index]
         else:
             self._loaded_values[key] = value_casted
@@ -189,8 +188,7 @@ class _Config:  # pylint: disable=too-many-instance-attributes,too-many-public-m
             return self._loaded_values[item]
 
         loaded_values: Dict[str, Optional[_ConfigValueType]]
-        parent_key = _CONFIG_ARGS[item].parent_parameter_key
-        if parent_key:
+        if parent_key := _CONFIG_ARGS[item].parent_parameter_key:
             loaded_values = self[parent_key]  # type: ignore[assignment]
         else:
             loaded_values = self._loaded_values
@@ -225,13 +223,13 @@ class _Config:  # pylint: disable=too-many-instance-attributes,too-many-public-m
     @staticmethod
     def _apply_type(name: str, value: Any, dtype: Type[_ConfigValueType], nullable: bool) -> Optional[_ConfigValueType]:
         if _Config._is_null(value=value):
-            if nullable is True:
+            if nullable:
                 return None
             raise exceptions.InvalidArgumentValue(
                 f"{name} configuration does not accept a null value. Please pass {dtype}."
             )
         try:
-            return dtype(value) if isinstance(value, dtype) is False else value
+            return dtype(value) if not isinstance(value, dtype) else value
         except ValueError as ex:
             raise exceptions.InvalidConfiguration(f"Config {name} must receive a {dtype} value.") from ex
 
@@ -239,7 +237,7 @@ class _Config:  # pylint: disable=too-many-instance-attributes,too-many-public-m
     def _is_null(value: Optional[_ConfigValueType]) -> bool:
         if value is None:
             return True
-        if isinstance(value, str) is True:
+        if isinstance(value, str):
             value = cast(str, value)
             if value.lower() in ("none", "null", "nil"):
                 return True
@@ -725,7 +723,7 @@ def apply_configs(function: FunctionType) -> FunctionType:
 
         for name, param in signature.parameters.items():
             if param.kind == param.VAR_KEYWORD and name in args:
-                if isinstance(args[name], dict) is False:
+                if not isinstance(args[name], dict):
                     raise RuntimeError(f"Argument {name} ({args[name]}) is a non dictionary keyword argument.")
                 keywords: Dict[str, Any] = args[name]
                 del args[name]

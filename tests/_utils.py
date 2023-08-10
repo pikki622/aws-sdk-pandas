@@ -50,9 +50,8 @@ class ExecutionTimer:
         self.test = name_override or request.node.originalname
 
         self.scenario: Optional[str] = None
-        match = re.search(r"\[(.+?)\]", request.node.name)
-        if match:
-            self.scenario = match.group(1)
+        if match := re.search(r"\[(.+?)\]", request.node.name):
+            self.scenario = match[1]
 
         self.data_paths = data_paths
 
@@ -60,10 +59,7 @@ class ExecutionTimer:
         if data_paths is None:
             return None
 
-        if isinstance(data_paths, list):
-            return ", ".join(data_paths)
-
-        return data_paths
+        return ", ".join(data_paths) if isinstance(data_paths, list) else data_paths
 
     def _calculate_data_size(self, data_paths: Optional[Union[str, List[str]]]) -> Optional[int]:
         if data_paths is None:
@@ -232,7 +228,7 @@ def get_df_csv() -> pd.DataFrame:
 
 
 def get_df_txt() -> pd.DataFrame:
-    df = pd.DataFrame(
+    return pd.DataFrame(
         {
             "col_name": [
                 "iint8               ",
@@ -275,7 +271,6 @@ def get_df_txt() -> pd.DataFrame:
             ],
         }
     )
-    return df
 
 
 def get_df_category():
@@ -373,24 +368,24 @@ def ensure_data_types(df: pd.DataFrame, has_list: bool = False, has_category: bo
     assert str(df["iint64"].dtype) == "Int64"
     assert str(df["float"].dtype).startswith("float")
     assert str(df["ddouble"].dtype) == "float64"
-    assert str(df["decimal"].dtype) in ("object", "float64")
+    assert str(df["decimal"].dtype) in {"object", "float64"}
     if "string_object" in df.columns:
         assert str(df["string_object"].dtype) == "string"
     assert str(df["string"].dtype) == "string"
-    assert str(df["date"].dtype) in ("object", "O", "datetime64[ns]")
-    assert str(df["timestamp"].dtype) in ("object", "O", "datetime64[ns]")
-    assert str(df["bool"].dtype) in ("boolean", "Int64", "object")
+    assert str(df["date"].dtype) in {"object", "O", "datetime64[ns]"}
+    assert str(df["timestamp"].dtype) in {"object", "O", "datetime64[ns]"}
+    assert str(df["bool"].dtype) in {"boolean", "Int64", "object"}
     if "binary" in df.columns:
         assert str(df["binary"].dtype) == "object"
     if has_category:
         assert str(df["category"].dtype) == "float64"
-    if has_list is True:
+    if has_list:
         assert str(df["list"].dtype) == "object"
         assert str(df["list_list"].dtype) == "object"
     if "__index_level_0__" in df.columns:
         assert str(df["__index_level_0__"].dtype) == "Int64"
-    assert str(df["par0"].dtype) in ("Int64", "category")
-    assert str(df["par1"].dtype) in ("string", "category")
+    assert str(df["par0"].dtype) in {"Int64", "category"}
+    assert str(df["par1"].dtype) in {"string", "category"}
     row = df.query("iint16 == 1")
     if not row.empty:
         row = row.iloc[0]
@@ -398,21 +393,21 @@ def ensure_data_types(df: pd.DataFrame, has_list: bool = False, has_category: bo
         assert str(type(row["date"]).__name__) == "date"
         if "binary" in df.columns:
             assert str(type(row["binary"]).__name__) == "bytes"
-        if has_list is True:
+        if has_list:
             assert str(type(row["list"][0]).__name__) == "int64"
             assert str(type(row["list_list"][0][0]).__name__) == "int64"
 
 
 def ensure_data_types_category(df: pd.DataFrame) -> None:
-    assert len(df.columns) in (7, 8)
-    assert str(df["id"].dtype) in ("category", "Int64")
+    assert len(df.columns) in {7, 8}
+    assert str(df["id"].dtype) in {"category", "Int64"}
     assert str(df["string_object"].dtype) == "category"
     assert str(df["string"].dtype) == "category"
     if "binary" in df.columns:
         assert str(df["binary"].dtype) == "category"
     assert str(df["float"].dtype) == "category"
-    assert str(df["int"].dtype) in ("category", "Int64")
-    assert str(df["par0"].dtype) in ("category", "Int64")
+    assert str(df["int"].dtype) in {"category", "Int64"}
+    assert str(df["par0"].dtype) in {"category", "Int64"}
     assert str(df["par1"].dtype) == "category"
 
 
@@ -545,7 +540,7 @@ def create_workgroup(wkg_name, config):
         if validate_workgroup_key(workgroup=wkg) is False:
             client.delete_work_group(WorkGroup=wkg_name, RecursiveDeleteOption=True)
             deleted = True
-    if wkg_name not in wkgs or deleted is True:
+    if wkg_name not in wkgs or deleted:
         client.create_work_group(
             Name=wkg_name,
             Configuration=config,

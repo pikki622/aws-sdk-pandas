@@ -70,7 +70,7 @@ def delete_dashboard(
     """
     if (name is None) and (dashboard_id is None):
         raise exceptions.InvalidArgument("You must pass a not None name or dashboard_id argument.")
-    if (dashboard_id is None) and (name is not None):
+    if dashboard_id is None:
         dashboard_id = get_dashboard_id(name=name, account_id=account_id, boto3_session=boto3_session)
     args: Dict[str, Any] = {
         "func_name": "delete_dashboard",
@@ -118,7 +118,7 @@ def delete_dataset(
     """
     if (name is None) and (dataset_id is None):
         raise exceptions.InvalidArgument("You must pass a not None name or dataset_id argument.")
-    if (dataset_id is None) and (name is not None):
+    if dataset_id is None:
         dataset_id = get_dataset_id(name=name, account_id=account_id, boto3_session=boto3_session)
     args: Dict[str, Any] = {
         "func_name": "delete_data_set",
@@ -164,7 +164,7 @@ def delete_data_source(
     """
     if (name is None) and (data_source_id is None):
         raise exceptions.InvalidArgument("You must pass a not None name or data_source_id argument.")
-    if (data_source_id is None) and (name is not None):
+    if data_source_id is None:
         data_source_id = get_data_source_id(name=name, account_id=account_id, boto3_session=boto3_session)
     args: Dict[str, Any] = {
         "func_name": "delete_data_source",
@@ -214,7 +214,7 @@ def delete_template(
     """
     if (name is None) and (template_id is None):
         raise exceptions.InvalidArgument("You must pass a not None name or template_id argument.")
-    if (template_id is None) and (name is not None):
+    if template_id is None:
         template_id = get_template_id(name=name, account_id=account_id, boto3_session=boto3_session)
     args: Dict[str, Any] = {
         "func_name": "delete_template",

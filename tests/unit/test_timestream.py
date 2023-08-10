@@ -86,7 +86,7 @@ def test_empty_query(timestream_database_and_table: str, chunked: bool) -> None:
     )
 
     if chunked:
-        assert list(output) == []
+        assert not list(output)
     else:
         assert output.empty
 
@@ -558,35 +558,27 @@ def test_measure_name(timestream_database_and_table, record_type):
         "time_col": "time",
     }
     if record_type == "MULTI":
-        data.update(
-            {
-                "dim0": ["foo", "boo", "bar"],
-                "dim1": [1, None, 3],
-                "measure_0": [1.1, 1.2, 1.3],
-                "measure_1": [2.1, 2.2, 2.3],
-            }
-        )
-        args.update(
-            {
-                "measure_col": ["measure_0", "measure_1"],
-                "measure_name": "example",
-                "dimensions_cols": ["dim0", "dim1"],
-            }
-        )
+        data |= {
+            "dim0": ["foo", "boo", "bar"],
+            "dim1": [1, None, 3],
+            "measure_0": [1.1, 1.2, 1.3],
+            "measure_1": [2.1, 2.2, 2.3],
+        }
+        args |= {
+            "measure_col": ["measure_0", "measure_1"],
+            "measure_name": "example",
+            "dimensions_cols": ["dim0", "dim1"],
+        }
     else:
-        data.update(
-            {
-                "dim": ["foo", "boo", "bar"],
-                "measure": [1.1, 1.2, 1.3],
-            }
-        )
-        args.update(
-            {
-                "measure_col": ["measure"],
-                "measure_name": "example",
-                "dimensions_cols": ["dim"],
-            }
-        )
+        data |= {
+            "dim": ["foo", "boo", "bar"],
+            "measure": [1.1, 1.2, 1.3],
+        }
+        args |= {
+            "measure_col": ["measure"],
+            "measure_name": "example",
+            "dimensions_cols": ["dim"],
+        }
 
     df = pd.DataFrame(data)
     rejected_records = wr.timestream.write(

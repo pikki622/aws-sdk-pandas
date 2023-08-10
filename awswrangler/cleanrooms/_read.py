@@ -16,9 +16,8 @@ _logger: logging.Logger = logging.getLogger(__name__)
 def _delete_after_iterate(
     dfs: Iterator[pd.DataFrame], keep_files: bool, kwargs: Dict[str, Any]
 ) -> Iterator[pd.DataFrame]:
-    for df in dfs:
-        yield df
-    if keep_files is False:
+    yield from dfs
+    if not keep_files:
         s3.delete_objects(**kwargs)
 
 
@@ -122,7 +121,7 @@ def read_sql_query(
         "boto3_session": boto3_session,
     }
     if chunked is False:
-        if keep_files is False:
+        if not keep_files:
             s3.delete_objects(**kwargs)
         return ret
     return _delete_after_iterate(ret, keep_files, kwargs)

@@ -74,7 +74,7 @@ def _get_default_logging_path(
         _account_id = account_id
     if (region is None) and (subnet_id is not None):
         _region: str = _utils.get_region_from_session(boto3_session=boto3_session)
-    elif (region is None) and (subnet_id is None):
+    elif region is None:
         raise exceptions.InvalidArgumentCombination("You must pass region or subnet_id or both.")
     else:
         _region = cast(str, region)
@@ -95,11 +95,10 @@ def _get_emr_classification_lib(emr_version: str) -> str:
     -------
         A string mentioning the appropriate classification lib based on the emr release.
     """
-    matches = re.findall(r"(\d.\d.\d)", emr_version)
-    number = 670
-    if matches:
+    if matches := re.findall(r"(\d.\d.\d)", emr_version):
         number = int(matches[0].replace(".", ""))
-
+    else:
+        number = 670
     return "spark-log4j2" if number > 670 else "spark-log4j"
 
 

@@ -616,7 +616,7 @@ def read_json(
 
     s3_client = _utils.client(service_name="s3", session=boto3_session)
 
-    if (dataset is True) and ("lines" not in pandas_kwargs):
+    if dataset and "lines" not in pandas_kwargs:
         pandas_kwargs["lines"] = True
     pandas_kwargs["orient"] = orient
     ignore_index: bool = orient not in ("split", "index", "columns")

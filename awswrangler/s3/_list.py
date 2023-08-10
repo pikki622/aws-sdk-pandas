@@ -72,10 +72,10 @@ def _validate_datetimes(
 
 
 def _prefix_cleanup(prefix: str) -> str:
-    for n, c in enumerate(prefix):
-        if c in ["*", "?", "["]:
-            return prefix[:n]
-    return prefix
+    return next(
+        (prefix[:n] for n, c in enumerate(prefix) if c in ["*", "?", "["]),
+        prefix,
+    )
 
 
 def _list_objects(

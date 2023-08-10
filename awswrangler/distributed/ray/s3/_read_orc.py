@@ -21,11 +21,9 @@ def _read_orc_metadata_file_distributed(
     resolved_filesystem, resolved_path = _resolve_filesystem_and_path(path)
 
     with resolved_filesystem.open_input_file(resolved_path) as f:
-        orc_file = _pyarrow_orc_file_wrapper(
+        if orc_file := _pyarrow_orc_file_wrapper(
             source=f,
-        )
-
-        if orc_file:
+        ):
             return orc_file.schema
 
     return None

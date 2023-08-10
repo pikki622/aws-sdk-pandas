@@ -499,7 +499,7 @@ def to_csv(  # pylint: disable=too-many-arguments,too-many-locals,too-many-state
     s3_client = _utils.client(service_name="s3", session=boto3_session)
 
     # Sanitize table to respect Athena's standards
-    if (sanitize_columns is True) or (database is not None and table is not None):
+    if sanitize_columns or (database is not None and table is not None):
         df, dtype, partition_cols, bucketing_info = _sanitize(
             df=copy_df_shallow(df),
             dtype=dtype,
@@ -549,7 +549,7 @@ def to_csv(  # pylint: disable=too-many-arguments,too-many-locals,too-many-state
     df = _apply_dtype(df=df, dtype=dtype, catalog_table_input=catalog_table_input, mode=mode)
 
     paths: List[str] = []
-    if dataset is False:
+    if not dataset:
         pandas_kwargs["sep"] = sep
         pandas_kwargs["index"] = index
         pandas_kwargs["columns"] = columns
@@ -592,7 +592,7 @@ def to_csv(  # pylint: disable=too-many-arguments,too-many-locals,too-many-state
             columns_types, partitions_types = _data_types.athena_types_from_pandas_partitioned(
                 df=df, index=index, partition_cols=partition_cols, dtype=dtype, index_left=True
             )
-            if schema_evolution is False:
+            if not schema_evolution:
                 _utils.check_schema_changes(columns_types=columns_types, table_input=catalog_table_input, mode=mode)
 
             create_table_args: Dict[str, Any] = {
@@ -983,7 +983,7 @@ def to_json(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stat
     s3_client = _utils.client(service_name="s3", session=boto3_session)
 
     # Sanitize table to respect Athena's standards
-    if (sanitize_columns is True) or (database is not None and table is not None):
+    if sanitize_columns or (database is not None and table is not None):
         df, dtype, partition_cols, bucketing_info = _sanitize(
             df=copy_df_shallow(df),
             dtype=dtype,
@@ -1032,7 +1032,7 @@ def to_json(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stat
 
     df = _apply_dtype(df=df, dtype=dtype, catalog_table_input=catalog_table_input, mode=mode)
 
-    if dataset is False:
+    if not dataset:
         output_paths = _to_text(
             df,
             file_format="json",
@@ -1054,7 +1054,7 @@ def to_json(  # pylint: disable=too-many-arguments,too-many-locals,too-many-stat
         columns_types, partitions_types = _data_types.athena_types_from_pandas_partitioned(
             df=df, index=index, partition_cols=partition_cols, dtype=dtype
         )
-        if schema_evolution is False:
+        if not schema_evolution:
             _utils.check_schema_changes(columns_types=columns_types, table_input=catalog_table_input, mode=mode)
 
         create_table_args: Dict[str, Any] = {

@@ -34,9 +34,10 @@ _COMPRESSION_2_EXT: Dict[Optional[str], str] = {
 
 
 def _extract_dtypes_from_table_input(table_input: Dict[str, Any]) -> Dict[str, str]:
-    dtypes: Dict[str, str] = {}
-    for col in table_input["StorageDescriptor"]["Columns"]:
-        dtypes[col["Name"]] = col["Type"]
+    dtypes: Dict[str, str] = {
+        col["Name"]: col["Type"]
+        for col in table_input["StorageDescriptor"]["Columns"]
+    }
     if "PartitionKeys" in table_input:
         for par in table_input["PartitionKeys"]:
             dtypes[par["Name"]] = par["Type"]
@@ -46,7 +47,7 @@ def _extract_dtypes_from_table_input(table_input: Dict[str, Any]) -> Dict[str, s
 def _apply_dtype(
     df: pd.DataFrame, dtype: Dict[str, str], catalog_table_input: Optional[Dict[str, Any]], mode: str
 ) -> pd.DataFrame:
-    if mode in ("append", "overwrite_partitions"):
+    if mode in {"append", "overwrite_partitions"}:
         if catalog_table_input is not None:
             catalog_types: Optional[Dict[str, str]] = _extract_dtypes_from_table_input(table_input=catalog_table_input)
             if catalog_types is not None:
@@ -72,7 +73,7 @@ def _validate_args(
 ) -> None:
     if df.empty is True:
         _logger.warning("Empty DataFrame will be written.")
-    if dataset is False:
+    if not dataset:
         if path is None:
             raise exceptions.InvalidArgumentValue("If dataset is False, the `path` argument must be passed.")
         if execution_engine == EngineEnum.PYTHON and path.endswith("/"):
@@ -133,19 +134,21 @@ def _sanitize(
 def _get_chunk_file_path(file_counter: int, file_path: str) -> str:
     slash_index: int = file_path.rfind("/")
     dot_index: int = file_path.find(".", slash_index)
-    file_index: str = "_" + str(file_counter)
+    file_index: str = f"_{file_counter}"
     if dot_index == -1:
-        file_path = file_path + file_index
+        file_path += file_index
     else:
         file_path = file_path[:dot_index] + file_index + file_path[dot_index:]
     return file_path
 
 
 def _get_write_table_args(pyarrow_additional_kwargs: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    write_table_args: Dict[str, Any] = {}
-    if pyarrow_additional_kwargs and "write_table_args" in pyarrow_additional_kwargs:
-        write_table_args = pyarrow_additional_kwargs.pop("write_table_args")
-    return write_table_args
+    return (
+        pyarrow_additional_kwargs.pop("write_table_args")
+        if pyarrow_additional_kwargs
+        and "write_table_args" in pyarrow_additional_kwargs
+        else {}
+    )
 
 
 def _get_file_path(
@@ -281,7 +284,7 @@ class _S3WriteStrategy(ABC):
         s3_client = _utils.client(service_name="s3", session=boto3_session)
 
         # Sanitize table to respect Athena's standards
-        if (sanitize_columns is True) or (database is not None and table is not None):
+        if sanitize_columns or (database is not None and table is not None):
             df, dtype, partition_cols, bucketing_info = _sanitize(
                 df=copy_df_shallow(df),
                 dtype=dtype,
@@ -330,7 +333,7 @@ class _S3WriteStrategy(ABC):
         )
         _logger.debug("Resolved pyarrow schema: \n%s", schema)
 
-        if dataset is False:
+        if not dataset:
             paths = self._write_to_s3(
                 df,
                 path=path,
@@ -354,7 +357,7 @@ class _S3WriteStrategy(ABC):
                 columns_types, partitions_types = _data_types.athena_types_from_pandas_partitioned(
                     df=df, index=index, partition_cols=partition_cols, dtype=dtype
                 )
-                if schema_evolution is False:
+                if not schema_evolution:
                     _utils.check_schema_changes(columns_types=columns_types, table_input=catalog_table_input, mode=mode)
 
                 create_table_args: Dict[str, Any] = {
@@ -420,7 +423,11 @@ class _S3WriteStrategy(ABC):
             if database and table:
                 try:
                     self._create_glue_table(**create_table_args)  # pylint: disable=protected-access
-                    if partitions_values and (regular_partitions is True) and (table_type != "GOVERNED"):
+                    if (
+                        partitions_values
+                        and regular_partitions
+                        and table_type != "GOVERNED"
+                    ):
                         self._add_glue_partitions(
                             database=database,
                             table=table,

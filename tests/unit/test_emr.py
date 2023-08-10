@@ -10,7 +10,7 @@ logging.getLogger("awswrangler").setLevel(logging.DEBUG)
 
 def emr_terminate_cluster_and_wait(cluster_id: str, timeout: int = 300, poll_interval: int = 10):
     wr.emr.terminate_cluster(cluster_id=cluster_id)
-    for i in range(int(timeout / poll_interval)):
+    for _ in range(timeout // poll_interval):
         if "TERMINATED" not in wr.emr.get_cluster_state(cluster_id=cluster_id):
             time.sleep(poll_interval)
         else:
@@ -19,9 +19,10 @@ def emr_terminate_cluster_and_wait(cluster_id: str, timeout: int = 300, poll_int
 
 
 def test_cluster(bucket, cloudformation_outputs, emr_security_configuration):
-    steps = []
-    for cmd in ['echo "Hello"', "ls -la"]:
-        steps.append(wr.emr.build_step(name=cmd, command=cmd))
+    steps = [
+        wr.emr.build_step(name=cmd, command=cmd)
+        for cmd in ['echo "Hello"', "ls -la"]
+    ]
     cluster_id = wr.emr.create_cluster(
         cluster_name="wrangler_cluster",
         logging_s3_path=f"s3://{bucket}/emr-logs/",
@@ -132,9 +133,10 @@ def test_cluster_single_node(bucket, cloudformation_outputs, emr_security_config
     time.sleep(10)
     cluster_state = wr.emr.get_cluster_state(cluster_id=cluster_id)
     assert cluster_state == "STARTING"
-    steps = []
-    for cmd in ['echo "Hello"', "ls -la"]:
-        steps.append(wr.emr.build_step(name=cmd, command=cmd))
+    steps = [
+        wr.emr.build_step(name=cmd, command=cmd)
+        for cmd in ['echo "Hello"', "ls -la"]
+    ]
     wr.emr.submit_steps(cluster_id=cluster_id, steps=steps)
     emr_terminate_cluster_and_wait(cluster_id=cluster_id)
     wr.s3.delete_objects(f"s3://{bucket}/emr-logs/")

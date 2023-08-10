@@ -371,7 +371,7 @@ def _read_pieces(
     pieces: List[ParquetFileFragment] = _deserialize_pieces_with_retry(serialized_pieces)
 
     # Ensure that we're reading at least one dataset fragment.
-    assert len(pieces) > 0
+    assert pieces
 
     import pyarrow as pa  # pylint: disable=import-outside-toplevel
 
@@ -442,9 +442,10 @@ def _sample_piece(
         if batch.num_rows > 0:
             in_memory_size = batch.nbytes / batch.num_rows
             metadata = piece.metadata
-            total_size = 0
-            for idx in range(metadata.num_row_groups):
-                total_size += metadata.row_group(idx).total_byte_size
+            total_size = sum(
+                metadata.row_group(idx).total_byte_size
+                for idx in range(metadata.num_row_groups)
+            )
             file_size = total_size / metadata.num_rows
             ratio = in_memory_size / file_size
         else:

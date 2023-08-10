@@ -151,10 +151,7 @@ class PandasJSONDatasource(PandasTextDatasource):  # pylint: disable=abstract-me
         pandas_kwargs: Dict[str, Any],
         **reader_args: Any,
     ) -> Iterator[pd.DataFrame]:
-        read_text_func = self.read_text_func
-
-        pandas_lines = pandas_kwargs.get("lines", False)
-        if pandas_lines:
+        if pandas_lines := pandas_kwargs.get("lines", False):
             yield from super()._read_stream(
                 f,
                 path,
@@ -167,6 +164,8 @@ class PandasJSONDatasource(PandasTextDatasource):  # pylint: disable=abstract-me
             )
         else:
             s3_path = f"s3://{path}"
+            read_text_func = self.read_text_func
+
             yield _read_text_file(
                 path=s3_path,
                 parser_func=read_text_func,

@@ -51,7 +51,7 @@ def _wait_objects(
 
     concurrency = _utils.ensure_worker_or_thread_count(use_threads)
 
-    if len(paths) < 1:
+    if not paths:
         return None
 
     path_batches = (

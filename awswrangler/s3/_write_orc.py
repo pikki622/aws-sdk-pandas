@@ -165,7 +165,7 @@ def _to_orc(
     )
     table: pa.Table = _df_to_table(df, schema, index, dtype)
     if max_rows_by_file is not None and max_rows_by_file > 0:
-        paths: List[str] = _to_orc_chunked(
+        return _to_orc_chunked(
             file_path=file_path,
             s3_client=s3_client,
             s3_additional_kwargs=s3_additional_kwargs,
@@ -176,19 +176,17 @@ def _to_orc(
             num_of_rows=df.shape[0],
             cpus=cpus,
         )
-    else:
-        write_table_args = _get_write_table_args(pyarrow_additional_kwargs)
-        with _new_writer(
-            file_path=file_path,
-            compression=compression,
-            pyarrow_additional_kwargs=pyarrow_additional_kwargs,
-            s3_client=s3_client,
-            s3_additional_kwargs=s3_additional_kwargs,
-            use_threads=use_threads,
-        ) as writer:
-            writer.write(table, **write_table_args)
-        paths = [file_path]
-    return paths
+    write_table_args = _get_write_table_args(pyarrow_additional_kwargs)
+    with _new_writer(
+        file_path=file_path,
+        compression=compression,
+        pyarrow_additional_kwargs=pyarrow_additional_kwargs,
+        s3_client=s3_client,
+        s3_additional_kwargs=s3_additional_kwargs,
+        use_threads=use_threads,
+    ) as writer:
+        writer.write(table, **write_table_args)
+    return [file_path]
 
 
 class _S3ORCWriteStrategy(_S3WriteStrategy):

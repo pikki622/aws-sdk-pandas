@@ -49,7 +49,7 @@ def test_sanitize_columns(
         df,
         path=file_path,
         sanitize_columns=sanitize_columns,
-        index=False if format != "json" else True,
+        index=format == "json",
         dataset=dataset,
         partition_cols=partition_cols,
         bucketing_info=bucketing_info,
@@ -248,13 +248,15 @@ def test_merge_additional_kwargs(path, kms_key_id, s3_additional_kwargs, use_thr
     assert len(paths) == 6
     descs = wr.s3.describe_objects(paths, use_threads=use_threads)
     for desc in descs.values():
-        if s3_additional_kwargs is None:
+        if (
+            s3_additional_kwargs is None
+            or s3_additional_kwargs["ServerSideEncryption"] != "aws:kms"
+            and s3_additional_kwargs["ServerSideEncryption"] == "AES256"
+        ):
             # SSE enabled by default
             assert desc.get("ServerSideEncryption") == "AES256"
         elif s3_additional_kwargs["ServerSideEncryption"] == "aws:kms":
             assert desc.get("ServerSideEncryption") == "aws:kms"
-        elif s3_additional_kwargs["ServerSideEncryption"] == "AES256":
-            assert desc.get("ServerSideEncryption") == "AES256"
 
 
 @pytest.mark.parametrize("use_threads", [True, False])
@@ -299,12 +301,14 @@ def test_copy_additional_kwargs(path, path2, kms_key_id, s3_additional_kwargs, u
     file_path2 = paths[0]
     assert df.equals(wr.s3.read_csv(file_path2))
     desc = wr.s3.describe_objects([file_path2])[file_path2]
-    if s3_additional_kwargs is None:
+    if (
+        s3_additional_kwargs is None
+        or s3_additional_kwargs["ServerSideEncryption"] != "aws:kms"
+        and s3_additional_kwargs["ServerSideEncryption"] == "AES256"
+    ):
         assert desc.get("ServerSideEncryption") == "AES256"
     elif s3_additional_kwargs["ServerSideEncryption"] == "aws:kms":
         assert desc.get("ServerSideEncryption") == "aws:kms"
-    elif s3_additional_kwargs["ServerSideEncryption"] == "AES256":
-        assert desc.get("ServerSideEncryption") == "AES256"
 
 
 @pytest.mark.parametrize("use_threads", [True, False])
@@ -374,12 +378,54 @@ def test_prefix_list(path, s3_additional_kwargs):
     paths = [path + p for p in prefixes]
     for p in paths:
         wr.s3.to_parquet(df=df, path=p)
-    assert len(wr.s3.list_objects(path + "*", s3_additional_kwargs=s3_additional_kwargs)) == 7
-    assert len(wr.s3.list_objects(path + "foo*", s3_additional_kwargs=s3_additional_kwargs)) == 6
-    assert len(wr.s3.list_objects(path + "*boo", s3_additional_kwargs=s3_additional_kwargs)) == 6
-    assert len(wr.s3.list_objects(path + "foo?boo", s3_additional_kwargs=s3_additional_kwargs)) == 4
-    assert len(wr.s3.list_objects(path + "foo*boo", s3_additional_kwargs=s3_additional_kwargs)) == 5
-    assert len(wr.s3.list_objects(path + "foo[12]boo", s3_additional_kwargs=s3_additional_kwargs)) == 2
+    assert (
+        len(
+            wr.s3.list_objects(
+                f"{path}*", s3_additional_kwargs=s3_additional_kwargs
+            )
+        )
+        == 7
+    )
+    assert (
+        len(
+            wr.s3.list_objects(
+                f"{path}foo*", s3_additional_kwargs=s3_additional_kwargs
+            )
+        )
+        == 6
+    )
+    assert (
+        len(
+            wr.s3.list_objects(
+                f"{path}*boo", s3_additional_kwargs=s3_additional_kwargs
+            )
+        )
+        == 6
+    )
+    assert (
+        len(
+            wr.s3.list_objects(
+                f"{path}foo?boo", s3_additional_kwargs=s3_additional_kwargs
+            )
+        )
+        == 4
+    )
+    assert (
+        len(
+            wr.s3.list_objects(
+                f"{path}foo*boo", s3_additional_kwargs=s3_additional_kwargs
+            )
+        )
+        == 5
+    )
+    assert (
+        len(
+            wr.s3.list_objects(
+                f"{path}foo[12]boo", s3_additional_kwargs=s3_additional_kwargs
+            )
+        )
+        == 2
+    )
 
 
 @pytest.mark.timeout(30)

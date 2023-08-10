@@ -114,7 +114,7 @@ def _select_query(
         },
     }
     if s3_additional_kwargs:
-        args.update(s3_additional_kwargs)
+        args |= s3_additional_kwargs
     _logger.debug("args:\n%s", pprint.pformat(args))
 
     obj_size: int = size_objects(  # type: ignore[assignment]
@@ -286,7 +286,7 @@ def select_query(
         last_modified_end=last_modified_end,
         s3_additional_kwargs=s3_additional_kwargs,
     )
-    if len(paths) < 1:
+    if not paths:
         raise exceptions.NoFilesFound(f"No files Found: {path}.")
 
     select_kwargs: Dict[str, Any] = {

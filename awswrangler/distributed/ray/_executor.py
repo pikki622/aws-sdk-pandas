@@ -23,7 +23,7 @@ class _RayExecutor(_BaseExecutor):
         """Map func and return ray futures."""
         _logger.debug("Ray map: %s", func)
         # Discard boto3 client
-        return list(func(*arg) for arg in zip(itertools.repeat(None), *args))
+        return [func(*arg) for arg in zip(itertools.repeat(None), *args)]
 
 
 @ray.remote

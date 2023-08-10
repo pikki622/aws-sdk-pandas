@@ -158,14 +158,25 @@ def _generate_transformations(
 ) -> List[Dict[str, Dict[str, Any]]]:
     trans: List[Dict[str, Dict[str, Any]]] = []
     if rename_columns is not None:
-        for k, v in rename_columns.items():
-            trans.append({"RenameColumnOperation": {"ColumnName": k, "NewColumnName": v}})
+        trans.extend(
+            {"RenameColumnOperation": {"ColumnName": k, "NewColumnName": v}}
+            for k, v in rename_columns.items()
+        )
     if cast_columns_types is not None:
-        for k, v in cast_columns_types.items():
-            trans.append({"CastColumnTypeOperation": {"ColumnName": k, "NewColumnType": v.upper()}})
+        trans.extend(
+            {
+                "CastColumnTypeOperation": {
+                    "ColumnName": k,
+                    "NewColumnType": v.upper(),
+                }
+            }
+            for k, v in cast_columns_types.items()
+        )
     if tag_columns is not None:
-        for k, tags in tag_columns.items():
-            trans.append({"TagColumnOperation": {"ColumnName": k, "Tags": tags}})
+        trans.extend(
+            {"TagColumnOperation": {"ColumnName": k, "Tags": tags}}
+            for k, tags in tag_columns.items()
+        )
     return trans
 
 
@@ -177,11 +188,7 @@ def _get_principal_names(principals: _AllowedType, type: Literal["users", "group
         return None
 
     if isinstance(principals, list):
-        if type == "users":
-            return principals
-        else:
-            return None
-
+        return principals if type == "users" else None
     return principals.get(type)
 
 
@@ -254,17 +261,20 @@ def create_athena_data_source(
         "DataSourceParameters": {"AthenaParameters": {"WorkGroup": workgroup}},
         "SslProperties": {"DisableSsl": True},
     }
-    permissions: List[Dict[str, Union[str, List[str]]]] = _generate_permissions(
+    if permissions := _generate_permissions(
         resource="data_source",
         namespace=namespace,
         account_id=account_id,
         boto3_session=boto3_session,
         allowed_users_to_use=_get_principal_names(allowed_to_use, "users"),
-        allowed_users_to_manage=_get_principal_names(allowed_to_manage, "users"),
+        allowed_users_to_manage=_get_principal_names(
+            allowed_to_manage, "users"
+        ),
         allowed_groups_to_use=_get_principal_names(allowed_to_use, "groups"),
-        allowed_groups_to_manage=_get_principal_names(allowed_to_manage, "groups"),
-    )
-    if permissions:
+        allowed_groups_to_manage=_get_principal_names(
+            allowed_to_manage, "groups"
+        ),
+    ):
         args["Permissions"] = permissions
     if tags is not None:
         _tags: List[Dict[str, str]] = [{"Key": k, "Value": v} for k, v in tags.items()]
@@ -426,23 +436,27 @@ def create_athena_dataset(
         "PhysicalTableMap": {table_uuid: physical_table},
         "LogicalTableMap": {table_uuid: {"Alias": logical_table_alias, "Source": {"PhysicalTableId": table_uuid}}},
     }
-    trans: List[Dict[str, Dict[str, Any]]] = _generate_transformations(
-        rename_columns=rename_columns, cast_columns_types=cast_columns_types, tag_columns=tag_columns
-    )
-    if trans:
+    if trans := _generate_transformations(
+        rename_columns=rename_columns,
+        cast_columns_types=cast_columns_types,
+        tag_columns=tag_columns,
+    ):
         args["LogicalTableMap"][table_uuid]["DataTransforms"] = trans
 
-    permissions: List[Dict[str, Union[str, List[str]]]] = _generate_permissions(
+    if permissions := _generate_permissions(
         resource="dataset",
         namespace=namespace,
         account_id=account_id,
         boto3_session=boto3_session,
         allowed_users_to_use=_get_principal_names(allowed_to_use, "users"),
-        allowed_users_to_manage=_get_principal_names(allowed_to_manage, "users"),
+        allowed_users_to_manage=_get_principal_names(
+            allowed_to_manage, "users"
+        ),
         allowed_groups_to_use=_get_principal_names(allowed_to_use, "groups"),
-        allowed_groups_to_manage=_get_principal_names(allowed_to_manage, "groups"),
-    )
-    if permissions:
+        allowed_groups_to_manage=_get_principal_names(
+            allowed_to_manage, "groups"
+        ),
+    ):
         args["Permissions"] = permissions
     if tags is not None:
         _tags: List[Dict[str, str]] = [{"Key": k, "Value": v} for k, v in tags.items()]
@@ -491,7 +505,7 @@ def create_ingestion(
         account_id = sts.get_account_id(boto3_session=boto3_session)
     if (dataset_name is None) and (dataset_id is None):
         raise exceptions.InvalidArgument("You must pass a not None dataset_name or dataset_id argument.")
-    if (dataset_id is None) and (dataset_name is not None):
+    if dataset_id is None:
         dataset_id = get_dataset_id(name=dataset_name, account_id=account_id, boto3_session=boto3_session)
     if ingestion_id is None:
         ingestion_id = uuid.uuid4().hex

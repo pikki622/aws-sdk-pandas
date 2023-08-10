@@ -80,7 +80,10 @@ def test_read_orc_filter_partitions(path, use_threads):
     df = pd.DataFrame({"c0": [0, 1, 2], "c1": [0, 1, 2], "c2": [0, 0, 1]})
     wr.s3.to_orc(df, path, dataset=True, partition_cols=["c1", "c2"], use_threads=use_threads)
     df2 = wr.s3.read_orc(
-        path, dataset=True, partition_filter=lambda x: True if x["c1"] == "0" else False, use_threads=use_threads
+        path,
+        dataset=True,
+        partition_filter=lambda x: x["c1"] == "0",
+        use_threads=use_threads,
     )
     assert df2.shape == (1, 3)
     assert df2.c0.iloc[0] == 0
@@ -89,7 +92,7 @@ def test_read_orc_filter_partitions(path, use_threads):
     df2 = wr.s3.read_orc(
         path,
         dataset=True,
-        partition_filter=lambda x: True if x["c1"] == "1" and x["c2"] == "0" else False,
+        partition_filter=lambda x: x["c1"] == "1" and x["c2"] == "0",
         use_threads=use_threads,
     )
     assert df2.shape == (1, 3)
@@ -97,7 +100,10 @@ def test_read_orc_filter_partitions(path, use_threads):
     assert df2.c1.astype(int).iloc[0] == 1
     assert df2.c2.astype(int).iloc[0] == 0
     df2 = wr.s3.read_orc(
-        path, dataset=True, partition_filter=lambda x: True if x["c2"] == "0" else False, use_threads=use_threads
+        path,
+        dataset=True,
+        partition_filter=lambda x: x["c2"] == "0",
+        use_threads=use_threads,
     )
     assert df2.shape == (2, 3)
     assert df2.c0.astype(int).sum() == 1
@@ -131,7 +137,7 @@ def test_read_orc_table_filter_partitions(path, glue_database, glue_table):
     df_out = wr.s3.read_orc_table(
         table=glue_table,
         database=glue_database,
-        partition_filter=lambda x: True if x["c1"] == "0" else False,
+        partition_filter=lambda x: x["c1"] == "0",
     )
     assert df_out.shape == (1, 3)
     assert df_out.c0.astype(int).sum() == 0
@@ -139,7 +145,7 @@ def test_read_orc_table_filter_partitions(path, glue_database, glue_table):
         wr.s3.read_orc_table(
             table=glue_table,
             database=glue_database,
-            partition_filter=lambda x: True if x["c1"] == "3" else False,
+            partition_filter=lambda x: x["c1"] == "3",
         )
 
 
@@ -305,7 +311,7 @@ def test_orc_with_size(path, use_threads, max_rows_by_file):
     df = pd.concat([df for _ in range(100)])
     paths = wr.s3.to_orc(
         df=df,
-        path=path + "x.orc",
+        path=f"{path}x.orc",
         index=False,
         dataset=False,
         max_rows_by_file=max_rows_by_file,
