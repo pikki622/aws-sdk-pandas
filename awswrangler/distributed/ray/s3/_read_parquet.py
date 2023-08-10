@@ -22,12 +22,10 @@ def _read_parquet_metadata_file_distributed(
     resolved_filesystem, resolved_path = _resolve_filesystem_and_path(path)
 
     with resolved_filesystem.open_input_file(resolved_path) as f:
-        pq_file = _pyarrow_parquet_file_wrapper(
+        if pq_file := _pyarrow_parquet_file_wrapper(
             source=f,
             coerce_int96_timestamp_unit=coerce_int96_timestamp_unit,
-        )
-
-        if pq_file:
+        ):
             return pq_file.schema.to_arrow_schema()
 
     return None

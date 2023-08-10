@@ -105,20 +105,19 @@ def _iterate_server_side_cursor(
                 cursor.execute(
                     f"FETCH FORWARD {pg8000_native.literal(chunksize)} FROM {pg8000_native.identifier(sscursor_name)}"
                 )
-                records = cursor.fetchall()
-
-                if not records:
+                if records := cursor.fetchall():
+                    yield _db_utils._records2df(
+                        records=records,
+                        cols_names=_db_utils._get_cols_names(cursor.description),
+                        index=index_col,
+                        safe=safe,
+                        dtype=dtype,
+                        timestamp_as_object=timestamp_as_object,
+                        dtype_backend=dtype_backend,
+                    )
+                else:
                     break
 
-                yield _db_utils._records2df(
-                    records=records,
-                    cols_names=_db_utils._get_cols_names(cursor.description),
-                    index=index_col,
-                    safe=safe,
-                    dtype=dtype,
-                    timestamp_as_object=timestamp_as_object,
-                    dtype_backend=dtype_backend,
-                )
         finally:
             cursor.execute(f"CLOSE {pg8000_native.identifier(sscursor_name)}")
 
@@ -585,10 +584,8 @@ def to_sql(
                 df.reset_index(level=df.index.names, inplace=True)
             column_placeholders: str = ", ".join(["%s"] * len(df.columns))
             column_names = [f'"{column}"' for column in df.columns]
-            insertion_columns = ""
             upsert_str = ""
-            if use_column_names:
-                insertion_columns = f"({', '.join(column_names)})"
+            insertion_columns = f"({', '.join(column_names)})" if use_column_names else ""
             if mode == "upsert":
                 upsert_columns = ", ".join(f"{column}=EXCLUDED.{column}" for column in column_names)
                 conflict_columns = ", ".join(upsert_conflict_columns)  # type: ignore[arg-type]

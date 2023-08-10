@@ -51,10 +51,8 @@ def _get_value_hash(value: Union[str, int, bool]) -> int:
         if not bigint_min <= value <= bigint_max:
             raise ValueError(f"{value} exceeds the range that Athena cannot handle as bigint.")
         if not int_min <= value <= int_max:
-            value = (value >> 32) ^ value
-        if value < 0:
-            return -value - 1
-        return int(value)
+            value ^= value >> 32
+        return -value - 1 if value < 0 else value
     if isinstance(value, (str, np.str_)):
         value_hash = 0
         for byte in value.encode():
@@ -95,7 +93,7 @@ def _delete_objects(
     if mode == "overwrite_partitions":
         if (table_type == "GOVERNED") and (table is not None) and (database is not None):
             transaction_id = cast(str, transaction_id)
-            del_objects: List[Dict[str, Any]] = lakeformation._get_table_objects(  # pylint: disable=protected-access
+            if del_objects := lakeformation._get_table_objects(  # pylint: disable=protected-access
                 catalog_id=catalog_id,
                 database=database,
                 table=table,
@@ -104,8 +102,7 @@ def _delete_objects(
                 partitions_values=keys,  # type: ignore[arg-type]
                 partitions_types=partitions_types,
                 boto3_session=boto3_session,
-            )
-            if del_objects:
+            ):
                 lakeformation._update_table_objects(  # pylint: disable=protected-access
                     catalog_id=catalog_id,
                     database=database,
@@ -252,14 +249,13 @@ def _to_dataset(
     if (mode == "overwrite") or ((mode == "overwrite_partitions") and (not partition_cols)):
         if (table_type == "GOVERNED") and (table is not None) and (database is not None):
             transaction_id = cast(str, transaction_id)
-            del_objects: List[Dict[str, Any]] = lakeformation._get_table_objects(  # pylint: disable=protected-access
+            if del_objects := lakeformation._get_table_objects(  # pylint: disable=protected-access
                 catalog_id=catalog_id,
                 database=database,
                 table=table,
                 transaction_id=transaction_id,
                 boto3_session=boto3_session,
-            )
-            if del_objects:
+            ):
                 lakeformation._update_table_objects(  # pylint: disable=protected-access
                     catalog_id=catalog_id,
                     database=database,

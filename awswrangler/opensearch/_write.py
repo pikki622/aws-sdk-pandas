@@ -119,8 +119,7 @@ def _get_refresh_interval(client: "opensearchpy.OpenSearch", index: str) -> Any:
     try:
         response = client.transport.perform_request("GET", url)
         index_settings = response.get(index, {}).get("index", {})
-        refresh_interval = index_settings.get("refresh_interval", _DEFAULT_REFRESH_INTERVAL)
-        return refresh_interval
+        return index_settings.get("refresh_interval", _DEFAULT_REFRESH_INTERVAL)
     except opensearchpy.exceptions.NotFoundError:
         return _DEFAULT_REFRESH_INTERVAL
 
@@ -323,12 +322,10 @@ def index_json(
         body = obj["Body"].read()
         lines = body.splitlines()
         documents = [json.loads(line) for line in lines]
-        if json_path:
-            documents = _get_documents_w_json_path(documents, json_path)
     else:  # local path
         documents = list(_file_line_generator(path, is_json=True))
-        if json_path:
-            documents = _get_documents_w_json_path(documents, json_path)
+    if json_path:
+        documents = _get_documents_w_json_path(documents, json_path)
     return index_documents(
         client=client, documents=documents, index=index, doc_type=doc_type, use_threads=use_threads, **kwargs
     )

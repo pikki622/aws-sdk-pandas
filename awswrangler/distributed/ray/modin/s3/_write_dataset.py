@@ -196,7 +196,9 @@ def _to_partitions_distributed(  # pylint: disable=unused-argument
     )
     paths = [path for metadata in df_write_metadata.values for _, _, paths in metadata for path in paths]
     partitions_values = {
-        prefix: list(str(p) for p in partitions) if isinstance(partitions, tuple) else [str(partitions)]
+        prefix: [str(p) for p in partitions]
+        if isinstance(partitions, tuple)
+        else [str(partitions)]
         for metadata in df_write_metadata.values
         for prefix, partitions, _ in metadata
     }

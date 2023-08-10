@@ -87,11 +87,15 @@ def _start_query_execution(
     execution_params: Optional[List[str]] = None,
     boto3_session: Optional[boto3.Session] = None,
 ) -> str:
-    args: Dict[str, Any] = {"QueryString": sql}
-
-    # s3_output
-    args["ResultConfiguration"] = {
-        "OutputLocation": _get_s3_output(s3_output=s3_output, wg_config=wg_config, boto3_session=boto3_session)
+    args: Dict[str, Any] = {
+        "QueryString": sql,
+        "ResultConfiguration": {
+            "OutputLocation": _get_s3_output(
+                s3_output=s3_output,
+                wg_config=wg_config,
+                boto3_session=boto3_session,
+            )
+        },
     }
 
     # encryption
@@ -178,7 +182,7 @@ def _fetch_txt_result(
         names=list(query_metadata.dtype.keys()),
         sep="\t",
     )
-    if keep_files is False:
+    if not keep_files:
         s3.delete_objects(
             path=[path, f"{path}.metadata"],
             use_threads=False,
@@ -243,7 +247,7 @@ def _get_query_metadata(  # pylint: disable=too-many-statements
         pandas_type: str = _data_types.athena2pandas(dtype=col_type, dtype_backend=dtype_backend)
         if (categories is not None) and (col_name in categories):
             dtype[col_name] = "category"
-        elif pandas_type in ["datetime64", "date"]:
+        elif pandas_type in {"datetime64", "date"}:
             parse_timestamps.append(col_name)
             if pandas_type == "date":
                 parse_dates.append(col_name)
@@ -283,7 +287,7 @@ def _empty_dataframe_response(
     chunked: bool, query_metadata: _QueryMetadata
 ) -> Union[pd.DataFrame, Generator[None, None, None]]:
     """Generate an empty DataFrame response."""
-    if chunked is False:
+    if not chunked:
         df = pd.DataFrame()
         df = _apply_query_metadata(df=df, query_metadata=query_metadata)
         return df

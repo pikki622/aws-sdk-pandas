@@ -78,18 +78,17 @@ def _read_parquet_metadata_file(
     coerce_int96_timestamp_unit: Optional[str] = None,
 ) -> pa.schema:
     with open_s3_object(
-        path=path,
-        mode="rb",
-        version_id=version_id,
-        use_threads=use_threads,
-        s3_client=s3_client,
-        s3_block_size=METADATA_READ_S3_BLOCK_SIZE,
-        s3_additional_kwargs=s3_additional_kwargs,
-    ) as f:
-        pq_file: Optional[pyarrow.parquet.ParquetFile] = _pyarrow_parquet_file_wrapper(
+            path=path,
+            mode="rb",
+            version_id=version_id,
+            use_threads=use_threads,
+            s3_client=s3_client,
+            s3_block_size=METADATA_READ_S3_BLOCK_SIZE,
+            s3_additional_kwargs=s3_additional_kwargs,
+        ) as f:
+        if pq_file := _pyarrow_parquet_file_wrapper(
             source=f, coerce_int96_timestamp_unit=coerce_int96_timestamp_unit
-        )
-        if pq_file:
+        ):
             return pq_file.schema.to_arrow_schema()
         return None
 
@@ -220,14 +219,14 @@ def _read_parquet_chunked(
 
     for path in paths:
         with open_s3_object(
-            path=path,
-            version_id=version_ids.get(path) if version_ids else None,
-            mode="rb",
-            use_threads=use_threads,
-            s3_client=s3_client,
-            s3_block_size=CHUNKED_READ_S3_BLOCK_SIZE,
-            s3_additional_kwargs=s3_additional_kwargs,
-        ) as f:
+                    path=path,
+                    version_id=version_ids.get(path) if version_ids else None,
+                    mode="rb",
+                    use_threads=use_threads,
+                    s3_client=s3_client,
+                    s3_block_size=CHUNKED_READ_S3_BLOCK_SIZE,
+                    s3_additional_kwargs=s3_additional_kwargs,
+                ) as f:
             pq_file: Optional[pyarrow.parquet.ParquetFile] = _pyarrow_parquet_file_wrapper(
                 source=f,
                 coerce_int96_timestamp_unit=coerce_int96_timestamp_unit,
@@ -235,7 +234,11 @@ def _read_parquet_chunked(
             if pq_file is None:
                 continue
 
-            use_threads_flag: bool = use_threads if isinstance(use_threads, bool) else bool(use_threads > 1)
+            use_threads_flag: bool = (
+                use_threads
+                if isinstance(use_threads, bool)
+                else use_threads > 1
+            )
             chunks = pq_file.iter_batches(
                 batch_size=batch_size, columns=columns, use_threads=use_threads_flag, use_pandas_metadata=False
             )
@@ -253,10 +256,7 @@ def _read_parquet_chunked(
                 while len(df.index) >= chunked:
                     yield df.iloc[:chunked, :].copy()
                     df = df.iloc[chunked:, :]
-                if df.empty:
-                    next_slice = None
-                else:
-                    next_slice = df
+                next_slice = None if df.empty else df
     if next_slice is not None:
         yield next_slice
 

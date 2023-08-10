@@ -40,7 +40,11 @@ def _create_iceberg_table(
 
     columns_types, _ = catalog.extract_athena_types(df=df, index=index, dtype=dtype)
     cols_str: str = ", ".join([f"{k} {v}" for k, v in columns_types.items()])
-    partition_cols_str: str = f"PARTITIONED BY ({', '.join([col for col in partition_cols])})" if partition_cols else ""
+    partition_cols_str: str = (
+        f"PARTITIONED BY ({', '.join(list(partition_cols))})"
+        if partition_cols
+        else ""
+    )
     table_properties_str: str = (
         ", " + ", ".join([f"'{key}'='{value}'" for key, value in additional_table_properties.items()])
         if additional_table_properties
@@ -233,7 +237,7 @@ def to_iceberg(
     finally:
         catalog.delete_table_if_exists(database=database, table=temp_table, boto3_session=boto3_session)
 
-        if keep_files is False:
+        if not keep_files:
             s3.delete_objects(
                 path=temp_path or wg_config.s3_output,  # type: ignore[arg-type]
                 boto3_session=boto3_session,

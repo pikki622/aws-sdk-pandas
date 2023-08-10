@@ -201,15 +201,15 @@ def test_exceptions(path):
     }
 
     with pytest.raises(wr.exceptions.InvalidArgumentValue):
-        args.update({"input_serialization": "ORC"})
+        args["input_serialization"] = "ORC"
         wr.s3.select_query(**args)
 
     with pytest.raises(wr.exceptions.InvalidCompression):
-        args.update({"input_serialization": "Parquet", "compression": "zip"})
+        args |= {"input_serialization": "Parquet", "compression": "zip"}
         wr.s3.select_query(**args)
 
     with pytest.raises(wr.exceptions.InvalidArgumentCombination):
-        args.update({"compression": "gzip"})
+        args["compression"] = "gzip"
         wr.s3.select_query(**args)
 
 

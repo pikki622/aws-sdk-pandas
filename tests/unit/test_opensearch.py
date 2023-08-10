@@ -191,7 +191,7 @@ def opensearch_serverless_collection_endpoint(cloudformation_outputs) -> str:
             policy=json.dumps(_get_opensearch_data_access_policy()),
         )
     except botocore.exceptions.ClientError as error:
-        if not error.response["Error"]["Code"] == "ConflictException":
+        if error.response["Error"]["Code"] != "ConflictException":
             raise error
 
     return cloudformation_outputs["CollectionEndpointsdkpandasaoss"]
@@ -223,22 +223,21 @@ def test_connection_elasticsearch_7_10_fgac(domain_endpoint_elasticsearch_7_10_f
 
 @pytest.fixture(scope="session")
 def opensearch_1_0_client(domain_endpoint_opensearch_1_0):
-    client = wr.opensearch.connect(host=domain_endpoint_opensearch_1_0)
-    return client
+    return wr.opensearch.connect(host=domain_endpoint_opensearch_1_0)
 
 
 @pytest.fixture(scope="session")
 def elasticsearch_7_10_fgac_client(domain_endpoint_elasticsearch_7_10_fgac, opensearch_password):
-    client = wr.opensearch.connect(
-        host=domain_endpoint_elasticsearch_7_10_fgac, username="test", password=opensearch_password
+    return wr.opensearch.connect(
+        host=domain_endpoint_elasticsearch_7_10_fgac,
+        username="test",
+        password=opensearch_password,
     )
-    return client
 
 
 @pytest.fixture(scope="session")
 def opensearch_serverless_client(opensearch_serverless_collection_endpoint):
-    client = wr.opensearch.connect(host=opensearch_serverless_collection_endpoint)
-    return client
+    return wr.opensearch.connect(host=opensearch_serverless_collection_endpoint)
 
 
 # testing multiple versions

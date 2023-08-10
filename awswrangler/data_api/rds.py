@@ -128,7 +128,7 @@ class RdsDataApi(_connector.DataApiConnector):
             except self.client.exceptions.BadRequestException as exception:
                 last_exception = exception
                 total_sleep += sleep
-                _logger.debug("BadRequestException occurred: %s", exception)
+                _logger.debug("BadRequestException occurred: %s", last_exception)
                 _logger.debug(
                     "Cluster may be paused - sleeping for %s seconds for a total of %s before retrying",
                     sleep,
@@ -224,8 +224,7 @@ class RdsDataApi(_connector.DataApiConnector):
             rows.append(row)
 
         column_names: List[str] = [column["name"] for column in result["columnMetadata"]]
-        dataframe = pd.DataFrame(rows, columns=column_names)
-        return dataframe
+        return pd.DataFrame(rows, columns=column_names)
 
 
 def escape_identifier(identifier: str, sql_mode: str = "mysql") -> str:
@@ -383,13 +382,8 @@ def _generate_parameters(columns: List[str], values: List[Any]) -> List[Dict[str
 
 
 def _generate_parameter_sets(df: pd.DataFrame) -> List[List[Dict[str, Any]]]:
-    parameter_sets = []
-
     columns = df.columns.tolist()
-    for values in df.values.tolist():
-        parameter_sets.append(_generate_parameters(columns, values))
-
-    return parameter_sets
+    return [_generate_parameters(columns, values) for values in df.values.tolist()]
 
 
 def to_sql(

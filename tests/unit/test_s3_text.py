@@ -31,12 +31,12 @@ def test_csv_encoding(path, encoding, strings, wrong_encoding, exception, line_t
     df2 = wr.s3.read_csv(
         file_path, encoding=encoding, lineterminator=line_terminator, use_threads=use_threads, chunksize=chunksize
     )
-    if isinstance(df2, pd.DataFrame) is False:
+    if not isinstance(df2, pd.DataFrame):
         df2 = pd.concat(df2, ignore_index=True)
     assert df.equals(df2)
     with pytest.raises(exception):
         df2 = wr.s3.read_csv(file_path, encoding=wrong_encoding, use_threads=use_threads, chunksize=chunksize)
-        if isinstance(df2, pd.DataFrame) is False:
+        if not isinstance(df2, pd.DataFrame):
             df2 = pd.concat(df2, ignore_index=True)
         assert df.equals(df2)
 
@@ -55,7 +55,7 @@ def test_csv_ignore_encoding_errors(path, encoding, strings, wrong_encoding):
     with pytest.raises(UnicodeDecodeError):
         df2 = wr.s3.read_csv(file_path, encoding=wrong_encoding)
     df2 = wr.s3.read_csv(file_path, encoding=wrong_encoding, encoding_errors="ignore")
-    if isinstance(df2, pd.DataFrame) is False:
+    if not isinstance(df2, pd.DataFrame):
         df2 = pd.concat(df2, ignore_index=True)
         assert df2.shape == (3, 4)
 
@@ -183,7 +183,7 @@ def test_csv_dataset_header_modes(path, mode, glue_database, glue_table):
     df_res = wr.s3.read_csv(path=path0)
 
     if mode == "append":
-        assert len(df_res) == sum([len(df) for df in dfs])
+        assert len(df_res) == sum(len(df) for df in dfs)
     else:
         assert df_res.equals(dfs[-1])
 
@@ -342,13 +342,15 @@ def test_csv_additional_kwargs(path, kms_key_id, s3_additional_kwargs, use_threa
     wr.s3.to_csv(df, path, index=False, s3_additional_kwargs=s3_additional_kwargs)
     assert df.equals(wr.s3.read_csv([path]))
     desc = wr.s3.describe_objects([path])[path]
-    if s3_additional_kwargs is None:
+    if (
+        s3_additional_kwargs is None
+        or s3_additional_kwargs["ServerSideEncryption"] != "aws:kms"
+        and s3_additional_kwargs["ServerSideEncryption"] == "AES256"
+    ):
         # SSE enabled by default
         assert desc.get("ServerSideEncryption") == "AES256"
     elif s3_additional_kwargs["ServerSideEncryption"] == "aws:kms":
         assert desc.get("ServerSideEncryption") == "aws:kms"
-    elif s3_additional_kwargs["ServerSideEncryption"] == "AES256":
-        assert desc.get("ServerSideEncryption") == "AES256"
 
 
 @pytest.mark.parametrize("line_terminator", ["\n", "\r", "\r\n"])

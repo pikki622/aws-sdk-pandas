@@ -68,16 +68,15 @@ def _read_orc_metadata_file(
     version_id: Optional[str] = None,
 ) -> pa.schema:
     with open_s3_object(
-        path=path,
-        mode="rb",
-        version_id=version_id,
-        use_threads=use_threads,
-        s3_client=s3_client,
-        s3_block_size=METADATA_READ_S3_BLOCK_SIZE,
-        s3_additional_kwargs=s3_additional_kwargs,
-    ) as f:
-        orc_file: Optional["ORCFile"] = _pyarrow_orc_file_wrapper(source=f)
-        if orc_file:
+            path=path,
+            mode="rb",
+            version_id=version_id,
+            use_threads=use_threads,
+            s3_client=s3_client,
+            s3_block_size=METADATA_READ_S3_BLOCK_SIZE,
+            s3_additional_kwargs=s3_additional_kwargs,
+        ) as f:
+        if orc_file := _pyarrow_orc_file_wrapper(source=f):
             return orc_file.schema
         return None
 

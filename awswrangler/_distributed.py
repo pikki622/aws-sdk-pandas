@@ -56,9 +56,7 @@ class Engine:
         EngineEnum
             The distribution engine installed.
         """
-        if importlib.util.find_spec("ray"):
-            return EngineEnum.RAY
-        return EngineEnum.PYTHON
+        return EngineEnum.RAY if importlib.util.find_spec("ray") else EngineEnum.PYTHON
 
     @classmethod
     def get(cls) -> EngineEnum:

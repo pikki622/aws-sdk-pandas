@@ -85,10 +85,16 @@ def test_describe_log_streams_and_filter_log_events(loggroup):
 
     log_streams_df.dropna(inplace=True)
     for log_stream in log_streams_df.to_dict("records"):
-        events = []
         token = log_stream.get("uploadSequenceToken")
-        for i, event_message in enumerate(["REPORT", "DURATION", "key:value", "START", "END"]):
-            events.append({"timestamp": int(1000 * datetime.now().timestamp()), "message": f"{i}_{event_message}"})
+        events = [
+            {
+                "timestamp": int(1000 * datetime.now().timestamp()),
+                "message": f"{i}_{event_message}",
+            }
+            for i, event_message in enumerate(
+                ["REPORT", "DURATION", "key:value", "START", "END"]
+            )
+        ]
         args = {
             "logGroupName": log_stream["logGroupName"],
             "logStreamName": log_stream["logStreamName"],

@@ -124,13 +124,13 @@ def test_basics(
     wr.config.secretsmanager_endpoint_url = f"https://secretsmanager.{region}.amazonaws.com"
     _urls_test(wr, glue_database)
 
-    mock_environ_dict = {}
-    mock_environ_dict["WR_STS_ENDPOINT_URL"] = f"https://sts.{region}.amazonaws.com"
-    mock_environ_dict["WR_S3_ENDPOINT_URL"] = f"https://s3.{region}.amazonaws.com"
-    mock_environ_dict["WR_ATHENA_ENDPOINT_URL"] = f"https://athena.{region}.amazonaws.com"
-    mock_environ_dict["WR_GLUE_ENDPOINT_URL"] = f"https://glue.{region}.amazonaws.com"
-    mock_environ_dict["WR_SECRETSMANAGER_ENDPOINT_URL"] = f"https://secretsmanager.{region}.amazonaws.com"
-
+    mock_environ_dict = {
+        "WR_STS_ENDPOINT_URL": f"https://sts.{region}.amazonaws.com",
+        "WR_S3_ENDPOINT_URL": f"https://s3.{region}.amazonaws.com",
+        "WR_ATHENA_ENDPOINT_URL": f"https://athena.{region}.amazonaws.com",
+        "WR_GLUE_ENDPOINT_URL": f"https://glue.{region}.amazonaws.com",
+        "WR_SECRETSMANAGER_ENDPOINT_URL": f"https://secretsmanager.{region}.amazonaws.com",
+    }
     with patch.dict(os.environ, mock_environ_dict):
         wr.config.reset()
     _urls_test(wr, glue_database)

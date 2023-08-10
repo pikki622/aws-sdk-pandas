@@ -43,7 +43,7 @@ def test_read_one_shot(path, seq, length):
                 s3obj.seek(i)
                 f.seek(i)
                 data = s3obj.read(length)
-                assert data[0:1] == text[i].encode("utf-8")
+                assert data[:1] == text[i].encode("utf-8")
                 assert data == f.read(length)
                 logger.debug(s3obj._cache)
                 assert len(s3obj._cache) == s3obj._size
@@ -69,7 +69,7 @@ def test_read(path, use_threads, block_size, seq, length):
                 s3obj.seek(i)
                 f.seek(i)
                 data = s3obj.read(length)
-                assert data[0:1] == text[i].encode("utf-8")
+                assert data[:1] == text[i].encode("utf-8")
                 assert data == f.read(length)
                 logger.debug(s3obj._cache)
                 if block_size < 1:
@@ -217,13 +217,15 @@ def test_additional_kwargs(path, kms_key_id, s3_additional_kwargs, use_threads):
     ) as s3obj:
         assert s3obj.read() == "foo"
     desc = wr.s3.describe_objects([path])[path]
-    if s3_additional_kwargs is None:
+    if (
+        s3_additional_kwargs is None
+        or s3_additional_kwargs["ServerSideEncryption"] != "aws:kms"
+        and s3_additional_kwargs["ServerSideEncryption"] == "AES256"
+    ):
         # S3 default encryption
         assert desc.get("ServerSideEncryption") == "AES256"
     elif s3_additional_kwargs["ServerSideEncryption"] == "aws:kms":
         assert desc.get("ServerSideEncryption") == "aws:kms"
-    elif s3_additional_kwargs["ServerSideEncryption"] == "AES256":
-        assert desc.get("ServerSideEncryption") == "AES256"
 
 
 def test_pyarrow(path, glue_table, glue_database):

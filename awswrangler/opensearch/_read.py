@@ -27,7 +27,7 @@ def _hit_to_row(hit: Mapping[str, Any]) -> Mapping[str, Any]:
     for k in hit.keys():
         if k == "_source":
             solved_fields = _resolve_fields(hit["_source"])
-            row.update(solved_fields)
+            row |= solved_fields
         elif k.startswith("_"):
             row[k] = hit[k]
     return row
@@ -121,11 +121,10 @@ def search(
             client, index=index, query=search_body, filter_path=filter_path, **kwargs
         )
         documents = [_hit_to_row(doc) for doc in documents_generator]
-        df = pd.DataFrame(documents)
+        return pd.DataFrame(documents)
     else:
         response = client.search(index=index, body=search_body, filter_path=filter_path, **kwargs)
-        df = _search_response_to_df(response)
-    return df
+        return _search_response_to_df(response)
 
 
 @_utils.check_optional_dependency(opensearchpy, "opensearchpy")
@@ -176,5 +175,4 @@ def search_by_sql(client: "opensearchpy.OpenSearch", sql_query: str, **kwargs: A
     response = client.transport.perform_request(
         "POST", url, headers={"content-type": "application/json"}, body=body, params=kwargs
     )
-    df = _search_response_to_df(response)
-    return df
+    return _search_response_to_df(response)

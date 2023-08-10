@@ -37,11 +37,7 @@ def _copy(
     sql_copy_extra_params: Optional[List[str]] = None,
     column_names: Optional[List[str]] = None,
 ) -> None:
-    if schema is None:
-        table_name: str = f'"{table}"'
-    else:
-        table_name = f'"{schema}"."{table}"'
-
+    table_name = f'"{table}"' if schema is None else f'"{schema}"."{table}"'
     auth_str: str = _make_s3_auth_string(
         iam_role=iam_role,
         aws_access_key_id=aws_access_key_id,
@@ -204,9 +200,7 @@ def to_sql(  # pylint: disable=too-many-locals
             column_names = [f'"{column}"' for column in df.columns]
             column_placeholders: str = ", ".join(["%s"] * len(column_names))
             schema_str = f'"{created_schema}".' if created_schema else ""
-            insertion_columns = ""
-            if use_column_names:
-                insertion_columns = f"({', '.join(column_names)})"
+            insertion_columns = f"({', '.join(column_names)})" if use_column_names else ""
             placeholder_parameter_pair_generator = _db_utils.generate_placeholder_parameter_pairs(
                 df=df, column_placeholders=column_placeholders, chunksize=chunksize
             )
@@ -672,7 +666,7 @@ def copy(  # pylint: disable=too-many-arguments,too-many-locals
             column_names=column_names,
         )
     finally:
-        if keep_files is False:
+        if not keep_files:
             _logger.debug("Deleting objects in S3 path: %s", path)
             s3.delete_objects(
                 path=path,

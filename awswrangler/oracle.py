@@ -44,8 +44,7 @@ def _validate_connection(con: "oracledb.Connection") -> None:
 
 def _get_table_identifier(schema: Optional[str], table: str) -> str:
     schema_str = f'"{schema}".' if schema else ""
-    table_identifier = f'{schema_str}"{table}"'
-    return table_identifier
+    return f'{schema_str}"{table}"'
 
 
 def _drop_table(cursor: "oracledb.Cursor", schema: Optional[str], table: str) -> None:
@@ -447,10 +446,14 @@ def _generate_insert_statement(
     df: pd.DataFrame,
     use_column_names: bool,
 ) -> str:
-    column_placeholders: str = f"({', '.join([':' + str(i + 1) for i in range(len(df.columns))])})"
+    column_placeholders: str = (
+        f"({', '.join([f':{str(i + 1)}' for i in range(len(df.columns))])})"
+    )
 
     if use_column_names:
-        insertion_columns = "(" + ", ".join('"' + column + '"' for column in df.columns) + ")"
+        insertion_columns = (
+            "(" + ", ".join(f'"{column}"' for column in df.columns) + ")"
+        )
     else:
         insertion_columns = ""
 
@@ -463,7 +466,7 @@ def _generate_upsert_statement(
     use_column_names: bool,
     primary_keys: Optional[List[str]],
 ) -> str:
-    if use_column_names is False:
+    if not use_column_names:
         raise exceptions.InvalidArgumentCombination('`use_column_names` has to be True when `mode="upsert"`')
     if not primary_keys:
         raise exceptions.InvalidArgumentCombination('`primary_keys` need to be defined when `mode="upsert"`')
@@ -473,7 +476,9 @@ def _generate_upsert_statement(
     primary_keys_str = ", ".join([f'"{key}"' for key in primary_keys])
     columns_str = ", ".join([f'"{key}"' for key in non_primary_key_columns])
 
-    column_placeholders: str = f"({', '.join([':' + str(i + 1) for i in range(len(df.columns))])})"
+    column_placeholders: str = (
+        f"({', '.join([f':{str(i + 1)}' for i in range(len(df.columns))])})"
+    )
 
     primary_key_condition_str = " AND ".join([f'"{key}" = :{i+1}' for i, key in enumerate(primary_keys)])
     assignment_str = ", ".join(
@@ -579,7 +584,7 @@ def to_sql(
             if index:
                 df.reset_index(level=df.index.names, inplace=True)
 
-            column_placeholders: str = f"({', '.join([':' + str(i + 1) for i in range(len(df.columns))])})"
+            column_placeholders: str = f"({', '.join([f':{str(i + 1)}' for i in range(len(df.columns))])})"
             table_identifier = _get_table_identifier(schema, table)
 
             if mode == "upsert":

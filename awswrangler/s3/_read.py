@@ -41,9 +41,9 @@ _logger: logging.Logger = logging.getLogger(__name__)
 
 
 def _get_path_root(path: Union[str, List[str]], dataset: bool) -> Optional[str]:
-    if (dataset is True) and (not isinstance(path, str)):
+    if dataset and not isinstance(path, str):
         raise exceptions.InvalidArgument("The path argument must be a string if dataset=True (Amazon S3 prefix).")
-    return _prefix_cleanup(str(path)) if dataset is True else None
+    return _prefix_cleanup(str(path)) if dataset else None
 
 
 def _get_path_ignore_suffix(path_ignore_suffix: Union[str, List[str], None]) -> Union[List[str], None]:
@@ -69,12 +69,15 @@ def _extract_partitions_metadata_from_paths(
         path_wo_filename: str = p.rpartition("/")[0] + "/"
         if path_wo_filename not in partitions_values:
             path_wo_prefix: str = path_wo_filename.replace(f"{path}", "")
-            dirs: Tuple[str, ...] = tuple(x for x in path_wo_prefix.split("/") if x and (x.count("=") > 0))
-            if dirs:
+            if dirs := tuple(
+                x
+                for x in path_wo_prefix.split("/")
+                if x and (x.count("=") > 0)
+            ):
                 values_tups = cast(Tuple[Tuple[str, str]], tuple(tuple(x.split("=", maxsplit=1)[:2]) for x in dirs))
                 values_dics: Dict[str, str] = dict(values_tups)
                 p_values: List[str] = list(values_dics.values())
-                p_types: Dict[str, str] = {x: "string" for x in values_dics.keys()}
+                p_types: Dict[str, str] = {x: "string" for x in values_dics}
                 if not partitions_types:
                     partitions_types = p_types
                 if p_values:
@@ -98,9 +101,9 @@ def _apply_partition_filter(
 
 
 def _apply_partitions(df: pd.DataFrame, dataset: bool, path: str, path_root: Optional[str]) -> pd.DataFrame:
-    if dataset is False:
+    if not dataset:
         return df
-    if dataset is True and path_root is None:
+    if path_root is None:
         raise exceptions.InvalidArgument("A path_root is required when dataset=True.")
     partitions: Dict[str, str] = _extract_partitions_from_path(path_root=path_root, path=path)
     _logger.debug("partitions: %s", partitions)
@@ -112,9 +115,10 @@ def _apply_partitions(df: pd.DataFrame, dataset: bool, path: str, path_root: Opt
 
 
 def _extract_partitions_dtypes_from_table_details(response: "GetTableResponseTypeDef") -> Dict[str, str]:
-    dtypes: Dict[str, str] = {}
-    for par in response["Table"].get("PartitionKeys", []):
-        dtypes[par["Name"]] = par["Type"]
+    dtypes: Dict[str, str] = {
+        par["Name"]: par["Type"]
+        for par in response["Table"].get("PartitionKeys", [])
+    }
     return dtypes
 
 
@@ -291,7 +295,7 @@ class _TableMetadataReader(ABC):
         # Partitions
         partitions_types: Optional[Dict[str, str]] = None
         partitions_values: Optional[Dict[str, List[str]]] = None
-        if (dataset is True) and (path_root is not None):
+        if dataset and path_root is not None:
             partitions_types, partitions_values = _extract_partitions_metadata_from_paths(path=path_root, paths=paths)
 
         # Casting
@@ -361,8 +365,9 @@ def _get_paths_for_glue_table(
             catalog_id=catalog_id,
             boto3_session=boto3_session,
         )
-        available_partitions = list(_ensure_locations_are_valid(available_partitions_dict.keys()))
-        if available_partitions:
+        if available_partitions := list(
+            _ensure_locations_are_valid(available_partitions_dict.keys())
+        ):
             paths = []
             path_root = path
             partitions: Union[str, List[str]] = _apply_partition_filter(

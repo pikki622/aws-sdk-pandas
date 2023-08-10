@@ -108,10 +108,20 @@ def _get_invalid_kwarg(msg: str) -> Optional[str]:
     str, optional
         Detected invalid keyword argument if any, None otherwise.
     """
-    for kwarg in ("ProjectionExpression", "KeyConditionExpression", "FilterExpression"):
-        if msg.startswith(f"Invalid {kwarg}: Attribute name is a reserved keyword; reserved keyword: "):
-            return kwarg
-    return None
+    return next(
+        (
+            kwarg
+            for kwarg in (
+                "ProjectionExpression",
+                "KeyConditionExpression",
+                "FilterExpression",
+            )
+            if msg.startswith(
+                f"Invalid {kwarg}: Attribute name is a reserved keyword; reserved keyword: "
+            )
+        ),
+        None,
+    )
 
 
 # SEE: https://stackoverflow.com/a/72295070
@@ -379,14 +389,11 @@ def _read_items(
     # Conditionally define optimal reading strategy
     use_get_item = (keys is not None) and (len(keys) == 1)
     use_batch_get_item = (keys is not None) and (len(keys) > 1)
-    use_query = (keys is None) and ("KeyConditionExpression" in kwargs)
-
     # Single Item
     if use_get_item:
         kwargs["Key"] = keys[0]
         items = _read_item(table_name, chunked, boto3_session, **kwargs)
 
-    # Batch of Items
     elif use_batch_get_item:
         kwargs["Keys"] = keys
         items = _read_batch_items(table_name, chunked, boto3_session, **kwargs)
@@ -399,6 +406,8 @@ def _read_items(
 
         if index:
             kwargs["IndexName"] = index
+
+        use_query = (keys is None) and ("KeyConditionExpression" in kwargs)
 
         if use_query:
             # Query

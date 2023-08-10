@@ -171,7 +171,7 @@ def _to_parquet(  # pylint: disable=unused-argument
     )
     table: pa.Table = _df_to_table(df, schema, index, dtype)
     if max_rows_by_file is not None and max_rows_by_file > 0:
-        paths: List[str] = _to_parquet_chunked(
+        return _to_parquet_chunked(
             file_path=file_path,
             s3_client=s3_client,
             s3_additional_kwargs=s3_additional_kwargs,
@@ -182,20 +182,18 @@ def _to_parquet(  # pylint: disable=unused-argument
             num_of_rows=df.shape[0],
             cpus=cpus,
         )
-    else:
-        write_table_args = _get_write_table_args(pyarrow_additional_kwargs)
-        with _new_writer(
-            file_path=file_path,
-            compression=compression,
-            pyarrow_additional_kwargs=pyarrow_additional_kwargs,
-            schema=table.schema,
-            s3_client=s3_client,
-            s3_additional_kwargs=s3_additional_kwargs,
-            use_threads=use_threads,
-        ) as writer:
-            writer.write_table(table, **write_table_args)
-        paths = [file_path]
-    return paths
+    write_table_args = _get_write_table_args(pyarrow_additional_kwargs)
+    with _new_writer(
+        file_path=file_path,
+        compression=compression,
+        pyarrow_additional_kwargs=pyarrow_additional_kwargs,
+        schema=table.schema,
+        s3_client=s3_client,
+        s3_additional_kwargs=s3_additional_kwargs,
+        use_threads=use_threads,
+    ) as writer:
+        writer.write_table(table, **write_table_args)
+    return [file_path]
 
 
 class _S3ParquetWriteStrategy(_S3WriteStrategy):
@@ -958,7 +956,11 @@ def store_parquet_metadata(  # pylint: disable=too-many-arguments,too-many-local
         boto3_session=boto3_session,
         catalog_id=catalog_id,
     )
-    if (partitions_types is not None) and (partitions_values is not None) and (regular_partitions is True):
+    if (
+        partitions_types is not None
+        and partitions_values is not None
+        and regular_partitions
+    ):
         catalog.add_parquet_partitions(
             database=database,
             table=table,

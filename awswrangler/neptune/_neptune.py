@@ -47,8 +47,7 @@ def execute_gremlin(client: NeptuneClient, query: str) -> pd.DataFrame:
     >>> df = wr.neptune.execute_gremlin(client, "g.V().limit(1)")
     """
     results = client.read_gremlin(query)
-    df = pd.DataFrame.from_records(results)
-    return df
+    return pd.DataFrame.from_records(results)
 
 
 @_utils.check_optional_dependency(opencypher, "opencypher")
@@ -76,8 +75,7 @@ def execute_opencypher(client: NeptuneClient, query: str) -> pd.DataFrame:
     >>> resp = wr.neptune.execute_opencypher(client, "MATCH (n) RETURN n LIMIT 1")
     """
     resp = client.read_opencypher(query)
-    df = pd.DataFrame.from_dict(resp)
-    return df
+    return pd.DataFrame.from_dict(resp)
 
 
 @_utils.check_optional_dependency(sparql, "SPARQLWrapper")
@@ -167,16 +165,15 @@ def to_property_graph(
     g = gremlin.traversal().withGraph(gremlin.Graph())
     is_edge_df = False
     is_update_df = True
-    if "~id" in df.columns:
-        if "~label" in df.columns:
-            is_update_df = False
-            if "~to" in df.columns and "~from" in df.columns:
-                is_edge_df = True
-    else:
+    if "~id" not in df.columns:
         raise exceptions.InvalidArgumentValue(
             "DataFrame must contain at least a ~id and a ~label column to be saved to Amazon Neptune"
         )
 
+    if "~label" in df.columns:
+        is_update_df = False
+        if "~to" in df.columns and "~from" in df.columns:
+            is_edge_df = True
     # Loop through items in the DF
     for index, row in df.iterrows():
         # build up a query
@@ -188,8 +185,7 @@ def to_property_graph(
             g = _build_gremlin_insert_vertices(g, row.to_dict(), use_header_cardinality)
         # run the query
         if index > 0 and index % batch_size == 0:
-            res = _run_gremlin_insert(client, g)
-            if res:
+            if res := _run_gremlin_insert(client, g):
                 g = gremlin.Graph().traversal()
 
     return _run_gremlin_insert(client, g)
@@ -240,16 +236,17 @@ def to_rdf_graph(
     ...     df=df
     ... )
     """
-    is_quads = False
-    if pd.Series([subject_column, object_column, predicate_column]).isin(df.columns).all():
-        if graph_column in df.columns:
-            is_quads = True
-    else:
+    if (
+        not pd.Series([subject_column, object_column, predicate_column])
+        .isin(df.columns)
+        .all()
+    ):
         raise exceptions.InvalidArgumentValue(
             """DataFrame must contain at least the subject, predicate, and object columns defined or the defaults
             (s, p, o) to be saved to Amazon Neptune"""
         )
 
+    is_quads = graph_column in df.columns
     query = ""
     # Loop through items in the DF
     for index, row in df.iterrows():
@@ -257,15 +254,12 @@ def to_rdf_graph(
         if is_quads:
             insert = f"""INSERT DATA {{ GRAPH <{row[graph_column]}> {{<{row[subject_column]}>
                     <{str(row[predicate_column])}> <{row[object_column]}> . }} }}; """
-            query = query + insert
         else:
             insert = f"""INSERT DATA {{ <{row[subject_column]}> <{str(row[predicate_column])}>
                     <{row[object_column]}> . }}; """
-            query = query + insert
-        # run the query
+        query = query + insert
         if index > 0 and index % batch_size == 0:
-            res = client.write_sparql(query)
-            if res:
+            if res := client.write_sparql(query):
                 query = ""
     return client.write_sparql(query)
 
@@ -377,7 +371,7 @@ def bulk_load(
             dependencies=dependencies,
         )
     finally:
-        if keep_files is False:
+        if not keep_files:
             _logger.debug("Deleting objects in S3 path: %s", path)
             s3.delete_objects(
                 path=path,
@@ -590,8 +584,7 @@ def _run_gremlin_insert(client: NeptuneClient, g: "gremlin.GraphTraversalSource"
         ".values('shape')", ""
     )  # hack to fix parser error for adding unknown values('shape') steps to translation.
     _logger.debug(s)
-    res = client.write_gremlin(s)
-    return res
+    return client.write_gremlin(s)
 
 
 def flatten_nested_df(
@@ -651,7 +644,7 @@ def flatten_nested_df(
 
         s = (df[new_columns].applymap(type) == dict).all()
         dict_columns = s[s].index.tolist()
-        if recursive and (len(list_columns) > 0 or len(dict_columns) > 0):
-            df = flatten_nested_df(df, include_prefix=include_prefix, separator=separator, recursive=recursive)
+    if recursive and (len(list_columns) > 0 or len(dict_columns) > 0):
+        df = flatten_nested_df(df, include_prefix=include_prefix, separator=separator, recursive=recursive)
 
     return df

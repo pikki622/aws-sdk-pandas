@@ -43,9 +43,10 @@ def _sanitize_name(name: str) -> str:
 
 
 def _extract_dtypes_from_table_details(response: "GetTableResponseTypeDef") -> Dict[str, str]:
-    dtypes: Dict[str, str] = {}
-    for col in response["Table"]["StorageDescriptor"]["Columns"]:
-        dtypes[col["Name"]] = col["Type"]
+    dtypes: Dict[str, str] = {
+        col["Name"]: col["Type"]
+        for col in response["Table"]["StorageDescriptor"]["Columns"]
+    }
     if "PartitionKeys" in response["Table"]:
         for par in response["Table"]["PartitionKeys"]:
             dtypes[par["Name"]] = par["Type"]
@@ -162,7 +163,13 @@ def rename_duplicated_columns(df: pd.DataFrame) -> pd.DataFrame:
     set_names = set(names)
     if len(names) == len(set_names):
         return df
-    d = {key: [name + f"_{i}" if i > 0 else name for i, name in enumerate(names[names == key])] for key in set_names}
+    d = {
+        key: [
+            f"{name}_{i}" if i > 0 else name
+            for i, name in enumerate(names[names == key])
+        ]
+        for key in set_names
+    }
     df.rename(columns=lambda c: d[c].pop(0), inplace=True)
     while df.columns.duplicated().any():
         # Catches edge cases where pd.DataFrame({"A": [1, 2], "a": [3, 4], "a_1": [5, 6]})

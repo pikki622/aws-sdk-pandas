@@ -161,8 +161,8 @@ def validate_kwargs(
 
         @wraps(func)
         def inner(*args: Any, **kwargs: Any) -> Any:
-            passed_unsupported_kwargs = set(unsupported_kwargs).intersection(  # type: ignore
-                set([key for key, value in kwargs.items() if value is not None])
+            passed_unsupported_kwargs = set(unsupported_kwargs).intersection(
+                {key for key, value in kwargs.items() if value is not None}
             )
 
             # Allow kwargs that didn't modify the default value
@@ -170,7 +170,7 @@ def validate_kwargs(
                 key for key in passed_unsupported_kwargs if kwargs[key] != signature.parameters[key].default
             }
 
-            if condition_fn() and len(passed_unsupported_kwargs) > 0:
+            if condition_fn() and passed_unsupported_kwargs:
                 raise exceptions.InvalidArgument(f"{message} `{', '.join(passed_unsupported_kwargs)}`.")
 
             return func(*args, **kwargs)
@@ -237,8 +237,7 @@ def default_botocore_config() -> botocore.config.Config:
     retries_config: Dict[str, Union[str, int]] = {
         "max_attempts": int(os.getenv("AWS_MAX_ATTEMPTS", "5")),
     }
-    mode = os.getenv("AWS_RETRY_MODE")
-    if mode:
+    if mode := os.getenv("AWS_RETRY_MODE"):
         retries_config["mode"] = mode
     return Config(
         retries=retries_config,  # type: ignore[arg-type]
@@ -617,14 +616,12 @@ def ensure_cpu_count(use_threads: Union[bool, int] = True) -> int:
 
     """
     if type(use_threads) == int:  # pylint: disable=unidiomatic-typecheck
-        if use_threads < 1:
-            return 1
-        return use_threads
+        return max(use_threads, 1)
     cpus: int = 1
     if use_threads is True:
         cpu_cnt: Optional[int] = os.cpu_count()
         if cpu_cnt is not None:
-            cpus = cpu_cnt if cpu_cnt > cpus else cpus
+            cpus = max(cpu_cnt, cpus)
     return cpus
 
 
@@ -747,8 +744,8 @@ def list_sampling(lst: List[Any], sampling: float) -> List[Any]:
     if _len == 0:
         return []
     num_samples: int = int(round(_len * sampling))
-    num_samples = _len if num_samples > _len else num_samples
-    num_samples = 1 if num_samples < 1 else num_samples
+    num_samples = min(num_samples, _len)
+    num_samples = max(num_samples, 1)
     _logger.debug("_len: %s", _len)
     _logger.debug("sampling: %s", sampling)
     _logger.debug("num_samples: %s", num_samples)
@@ -759,8 +756,7 @@ def list_sampling(lst: List[Any], sampling: float) -> List[Any]:
 
 def check_duplicated_columns(df: pd.DataFrame) -> Any:
     """Raise an exception if there are duplicated columns names."""
-    duplicated: List[str] = df.loc[:, df.columns.duplicated()].columns.to_list()
-    if duplicated:
+    if duplicated := df.loc[:, df.columns.duplicated()].columns.to_list():
         raise exceptions.InvalidDataFrame(
             f"There are duplicated column names in your DataFrame: {duplicated}. "
             f"Note that your columns may have been sanitized and it can be the cause of "
@@ -834,9 +830,9 @@ def try_it(
 
 def get_even_chunks_sizes(total_size: int, chunk_size: int, upper_bound: bool) -> Tuple[int, ...]:
     """Calculate even chunks sizes (Best effort)."""
-    round_func: Callable[[float], float] = math.ceil if upper_bound is True else math.floor
+    round_func: Callable[[float], float] = math.ceil if upper_bound else math.floor
     num_chunks: int = int(round_func(float(total_size) / float(chunk_size)))
-    num_chunks = 1 if num_chunks < 1 else num_chunks
+    num_chunks = max(num_chunks, 1)
     base_size: int = int(total_size / num_chunks)
     rest: int = total_size % num_chunks
     sizes: List[int] = list(itertools.repeat(base_size, num_chunks))
@@ -866,7 +862,7 @@ def block_waiting_available_thread(seq: Sequence[Future], max_workers: int) -> N
 
 def check_schema_changes(columns_types: Dict[str, str], table_input: Optional[Dict[str, Any]], mode: str) -> None:
     """Check schema changes."""
-    if (table_input is not None) and (mode in ("append", "overwrite_partitions")):
+    if table_input is not None and mode in {"append", "overwrite_partitions"}:
         catalog_cols: Dict[str, str] = {x["Name"]: x["Type"] for x in table_input["StorageDescriptor"]["Columns"]}
         for c, t in columns_types.items():
             if c not in catalog_cols:
@@ -914,9 +910,7 @@ def list_to_arrow_table(
     """Construct a PyArrow Table from list of dictionaries."""
     arrays = []
     if not schema:
-        names = []
-        if mapping:
-            names = list(mapping[0].keys())
+        names = list(mapping[0].keys()) if mapping else []
         for n in names:
             v = [row[n] if n in row else None for row in mapping]
             arrays.append(v)

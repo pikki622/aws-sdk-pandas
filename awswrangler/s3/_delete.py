@@ -133,7 +133,7 @@ def delete_objects(
     paths_by_bucket: Dict[str, List[str]] = _split_paths_by_bucket(paths)
 
     chunks = []
-    for _, paths in paths_by_bucket.items():
+    for paths in paths_by_bucket.values():
         chunks += _utils.chunkify(lst=paths, max_length=1_000)
 
     executor: _BaseExecutor = _get_executor(use_threads=use_threads)

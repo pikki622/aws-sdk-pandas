@@ -54,10 +54,7 @@ def _estimate_available_parallelism() -> int:
 
 def ensure_worker_count(use_threads: Union[bool, int] = True) -> int:
     if type(use_threads) == int:  # pylint: disable=unidiomatic-typecheck
-        if use_threads < 1:
-            return 1
-        return use_threads
-
+        return max(use_threads, 1)
     if use_threads is False:
         return 1
 
